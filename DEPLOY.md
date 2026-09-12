@@ -57,6 +57,17 @@ registry would lose changes, and the AI model's dependencies exceed the function
 Moving to hosted Postgres and dropping the AI would make it possible, but it is not worth the
 risk for the demo.
 
+## Option C — Render, one free service, no card (no AI page)
+
+`render.yaml` builds the root Dockerfile with `AI=0`. Everything except the AI footprint
+page works on one URL. Free instances sleep after 15 min idle (first request ~1 min).
+
+1. Push the repo to GitHub (Step 0).
+2. https://dashboard.render.com → New → **Blueprint** → connect the repo → Apply.
+3. Service → Environment: add `NEXT_PUBLIC_PUBLIC_URL` = `https://tribhoomi.onrender.com`
+   (or whatever name Render gave) and `NEXT_PUBLIC_CESIUM_TOKEN` = your token, then
+   **Manual Deploy → Clear build cache & deploy** so they are baked into the frontend build.
+
 ## Option B — Vercel (frontend) + Render (backend)
 
 Backend on Render (free tier: 512 MB RAM, so AI is disabled with `AI=0`):

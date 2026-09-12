@@ -1,16 +1,17 @@
-# Render blueprint: backend as a Docker web service. Pair it with the frontend on Vercel
-# (set Vercel env API_URL to this service's URL). Free tier has 512 MB RAM, so AI=0.
+# Render blueprint — ONE free web service running frontend + backend from the root Dockerfile.
+# Free tier (512 MB RAM, no card) => AI=0: everything works except the AI footprint page.
 services:
   - type: web
-    name: tribhoomi-api
+    name: tribhoomi
     runtime: docker
-    dockerfilePath: backend/Dockerfile
-    dockerContext: backend
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
     dockerBuildArgs:
       AI: "0"
     envVars:
       - key: CORS_ORIGINS
         value: "*"
-      - key: PORT
-        value: "8000"
+      - key: NEXT_PUBLIC_PUBLIC_URL
+        sync: false     # set in the Render dashboard to https://<service>.onrender.com
     healthCheckPath: /api/health
