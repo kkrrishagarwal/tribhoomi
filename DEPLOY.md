@@ -36,7 +36,7 @@ the host instead (next steps).
    Save; the Space rebuilds. Variables are passed as Docker build args, which the Dockerfile declares.
 4. First build takes ~10–15 minutes (installs CPU torch). Then open
    `https://<your-hf-username>-tribhoomi.hf.space`. The first AI run downloads the model (~15 MB).
-5. Optional: to skip the AI entirely and build faster, add a Variable `AI` = `0`.
+5. Add a Variable `AI` = `1` to include the AI footprint model (the Space has enough RAM). Without it the build skips torch and the AI page reports "model unavailable".
 
 Notes: the SQLite database is created and seeded on first start and lives inside the
 container, so it resets whenever the Space restarts or sleeps (free Spaces sleep after 48 h of

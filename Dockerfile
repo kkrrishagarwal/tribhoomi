@@ -7,7 +7,8 @@
 # ---- stage 1: build the Next.js frontend ------------------------------------------------
 FROM node:20-slim AS web
 WORKDIR /web
-COPY frontend/package.json frontend/package-lock.json frontend/scripts ./
+COPY frontend/package.json frontend/package-lock.json ./
+COPY frontend/scripts ./scripts
 RUN npm ci --no-audit --no-fund
 COPY frontend/ ./
 # NEXT_PUBLIC_* values are baked in at build time
@@ -18,7 +19,8 @@ RUN npm run build
 
 # ---- stage 2: python + node runtime ------------------------------------------------------
 FROM python:3.12-slim
-ARG AI=1
+# AI=1 installs CPU torch + transformers (needs ~2 GB RAM at runtime: Hugging Face Space yes, Render free no).
+ARG AI=0
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 HF_HOME=/data/hf PORT=7860 NODE_ENV=production
 RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates \
  && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && apt-get install -y --no-install-recommends nodejs \
