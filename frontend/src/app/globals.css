@@ -1,0 +1,161 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ------------------------------------------------------------------ tokens
+   Command-center theme: near-black console base, glass panels, teal accent for
+   live data, amber for pending, red for tampered/disputed, green for approved. */
+:root {
+  color-scheme: dark;
+  --bg: #0a0e14;
+  --panel: #12161f;
+  --panel-2: #171c27;
+  --line: rgba(34, 232, 200, 0.18);
+  --line-strong: rgba(34, 232, 200, 0.45);
+  --ink: #e6edf3;
+  --ink-muted: #9fb0c3;
+  --ink-dim: #8b9bb0;
+  --accent: #22e8c8;
+  --accent-cyan: #00d9ff;
+  --warn: #fbbf24;
+  --danger: #f87171;
+  --ok: #4ade80;
+  --font-sans: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+
+body {
+  background: radial-gradient(1200px 600px at 80% -10%, rgba(0, 217, 255, 0.07), transparent 60%),
+              radial-gradient(900px 500px at -10% 110%, rgba(34, 232, 200, 0.05), transparent 60%),
+              var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+code, kbd, pre, .font-mono { font-family: var(--font-mono); }
+
+/* ------------------------------------------------------------------ components */
+.card {
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 8px 30px rgba(0, 0, 0, 0.35);
+}
+.glass {
+  background: rgba(18, 22, 31, 0.78);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  color: var(--ink);
+}
+.glow { box-shadow: 0 0 0 1px var(--line-strong), 0 0 18px rgba(34, 232, 200, 0.35); }
+.glow-warn { box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.5), 0 0 18px rgba(251, 191, 36, 0.3); }
+.glow-danger { box-shadow: 0 0 0 1px rgba(248, 113, 113, 0.55), 0 0 18px rgba(248, 113, 113, 0.35); }
+.glow-ok { box-shadow: 0 0 0 1px rgba(74, 222, 128, 0.5), 0 0 16px rgba(74, 222, 128, 0.28); }
+
+.btn { @apply inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed; }
+.btn-primary { @apply btn; background: rgba(34, 232, 200, 0.14); color: var(--accent); border: 1px solid var(--line-strong); }
+.btn-primary:hover { background: rgba(34, 232, 200, 0.24); box-shadow: 0 0 14px rgba(34, 232, 200, 0.3); }
+.btn-accent { @apply btn font-semibold; color: #0a0e14; background: linear-gradient(180deg, #f6a24f, #f28c28); border: 1px solid rgba(246, 162, 79, 0.6); box-shadow: 0 0 14px rgba(242, 140, 40, 0.3); }
+.btn-accent:hover { filter: brightness(1.08); }
+.btn-ghost { @apply btn; background: rgba(255, 255, 255, 0.03); color: var(--ink); border: 1px solid rgba(159, 176, 195, 0.25); }
+.btn-ghost:hover { border-color: var(--line-strong); color: var(--accent); }
+.label { @apply text-[11px] font-semibold uppercase tracking-[0.14em]; color: var(--ink-dim); }
+
+/* HUD number panel (dashboard) */
+.hud { position: relative; overflow: hidden; }
+.hud::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px;
+  background: linear-gradient(90deg, transparent 0%, var(--accent) 35%, var(--accent-cyan) 50%, var(--accent) 65%, transparent 100%);
+  background-size: 200% 100%; animation: sweep 3s linear infinite; opacity: 0.9;
+}
+.hud-number { font-family: var(--font-mono); color: var(--accent); text-shadow: 0 0 14px rgba(34, 232, 200, 0.55), 0 0 2px rgba(34, 232, 200, 0.9); font-variant-numeric: tabular-nums; }
+.hud-number.warn { color: var(--warn); text-shadow: 0 0 14px rgba(251, 191, 36, 0.5); }
+.hud-number.danger { color: var(--danger); text-shadow: 0 0 14px rgba(248, 113, 113, 0.55); }
+
+/* scanning loader instead of a spinner */
+.scan { position: relative; overflow: hidden; height: 3px; border-radius: 2px; background: rgba(34, 232, 200, 0.12); }
+.scan::after { content: ""; position: absolute; top: 0; bottom: 0; width: 34%; background: linear-gradient(90deg, transparent, var(--accent), transparent); animation: scan 1.4s linear infinite; }
+
+/* grid texture behind maps */
+.grid-bg { background-image: linear-gradient(rgba(34, 232, 200, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(34, 232, 200, 0.05) 1px, transparent 1px); background-size: 28px 28px; }
+
+/* ------------------------------------------------------------------ dark remap
+   Pages were written with light Tailwind classes. Rather than rewriting every
+   page (and risking logic edits), the common light utilities are remapped here.
+   Contrast targets: body text >= 12:1, secondary text >= 6:1 on the panel colour. */
+.bg-white, .bg-white\/90, .bg-white\/95 { background-color: rgba(18, 22, 31, 0.9) !important; color: var(--ink); }
+.bg-slate-50, .bg-slate-50\/50 { background-color: var(--panel-2) !important; }
+.bg-slate-100, .hover\:bg-slate-50:hover, .hover\:bg-slate-100:hover { background-color: #1c2331 !important; }
+.hover\:bg-slate-50:hover { background-color: rgba(34, 232, 200, 0.06) !important; }
+.bg-slate-200 { background-color: #263042 !important; }
+.bg-slate-900\/90 { background-color: rgba(10, 14, 20, 0.92) !important; border: 1px solid var(--line-strong); }
+.bg-amber-50, .bg-amber-50\/60, .bg-amber-50\/95 { background-color: rgba(251, 191, 36, 0.08) !important; }
+.bg-amber-100 { background-color: rgba(251, 191, 36, 0.18) !important; }
+.bg-red-50, .bg-red-50\/50 { background-color: rgba(248, 113, 113, 0.08) !important; }
+.bg-red-100 { background-color: rgba(248, 113, 113, 0.18) !important; }
+.bg-emerald-50 { background-color: rgba(74, 222, 128, 0.08) !important; }
+.bg-emerald-100, .bg-emerald-200 { background-color: rgba(74, 222, 128, 0.16) !important; }
+.bg-yellow-50 { background-color: rgba(253, 224, 71, 0.08) !important; }
+.bg-yellow-200, .hover\:bg-yellow-300:hover { background-color: rgba(253, 224, 71, 0.22) !important; color: #fde68a !important; }
+.bg-sky-100 { background-color: rgba(56, 189, 248, 0.16) !important; }
+.bg-indigo-100 { background-color: rgba(129, 140, 248, 0.18) !important; }
+.bg-violet-100 { background-color: rgba(167, 139, 250, 0.18) !important; }
+.bg-navy-800, .bg-navy-900 { background-color: var(--panel) !important; }
+.bg-navy-700, .hover\:bg-navy-700:hover { background-color: rgba(34, 232, 200, 0.12) !important; }
+.bg-slate-500 { background-color: #3b4657 !important; }
+.bg-emerald-600 { background-color: #15803d !important; }
+.bg-indigo-600 { background-color: #4f46e5 !important; }
+
+.text-slate-900, .text-slate-800, .text-slate-700 { color: var(--ink) !important; }
+.text-slate-600, .text-slate-500 { color: var(--ink-muted) !important; }
+.text-slate-400 { color: var(--ink-dim) !important; }
+.text-navy-700 { color: var(--accent) !important; }
+.text-emerald-700, .text-emerald-800, .text-emerald-900 { color: #86efac !important; }
+.text-red-600, .text-red-700, .text-red-800, .text-red-900 { color: #fca5a5 !important; }
+.text-amber-700, .text-amber-800, .text-amber-900 { color: #fcd34d !important; }
+.text-orange-700 { color: #fdba74 !important; }
+.text-sky-900 { color: #7dd3fc !important; }
+.text-indigo-900 { color: #a5b4fc !important; }
+.text-violet-900 { color: #c4b5fd !important; }
+.text-slate-100, .text-slate-200, .text-slate-300 { color: var(--ink) !important; }
+
+.border-slate-100, .border-slate-200, .divide-slate-100 > :not([hidden]) ~ :not([hidden]) { border-color: rgba(159, 176, 195, 0.14) !important; }
+.border-slate-300 { border-color: rgba(159, 176, 195, 0.28) !important; }
+.border-amber-200, .border-amber-300 { border-color: rgba(251, 191, 36, 0.45) !important; }
+.border-red-200, .border-red-300, .border-red-500 { border-color: rgba(248, 113, 113, 0.55) !important; }
+.border-yellow-300 { border-color: rgba(253, 224, 71, 0.45) !important; }
+.border-saffron-500 { border-color: rgba(242, 140, 40, 0.6) !important; }
+.border-navy-700 { border-color: var(--line-strong) !important; }
+.border-white { border-color: var(--panel) !important; }
+.shadow, .shadow-sm, .shadow-lg { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45) !important; }
+
+input, select, textarea {
+  background-color: #0d1219 !important; color: var(--ink) !important;
+  border-color: rgba(159, 176, 195, 0.28) !important;
+}
+input::placeholder, textarea::placeholder { color: #7d8ca1; }
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--line-strong) !important; box-shadow: 0 0 0 3px rgba(34, 232, 200, 0.15); }
+input[type="range"] { accent-color: var(--accent); background: transparent !important; }
+input[type="checkbox"] { accent-color: var(--accent); }
+option { background: #0d1219; color: var(--ink); }
+
+/* header nav */
+header { border-bottom: 1px solid var(--line); background: rgba(10, 14, 20, 0.9) !important; backdrop-filter: blur(10px); }
+footer { background: transparent !important; border-color: rgba(159, 176, 195, 0.14) !important; color: var(--ink-dim) !important; }
+
+/* maps */
+.leaflet-container { width: 100%; height: 100%; background: #0d1219; }
+.leaflet-tile { filter: brightness(0.78) contrast(1.05) saturate(0.8); }   /* tone OSM tiles to the console palette but keep street labels readable on a projector */
+.leaflet-control-zoom a, .leaflet-control-attribution { background: rgba(18, 22, 31, 0.9) !important; color: var(--ink) !important; border-color: var(--line) !important; }
+.leaflet-control-attribution a { color: var(--accent) !important; }
+.leaflet-tooltip { background: rgba(10, 14, 20, 0.92); color: var(--ink); border: 1px solid var(--line-strong); font-family: var(--font-mono); font-size: 11px; box-shadow: 0 0 12px rgba(34, 232, 200, 0.2); }
+.leaflet-tooltip::before { display: none; }
+.cesium-viewer .cesium-widget-credits { background: rgba(10, 14, 20, 0.6); }
+
+@media (prefers-reduced-motion: reduce) {
+  .hud::before, .scan::after, .animate-pulse-danger, .animate-panel-in { animation: none !important; }
+}

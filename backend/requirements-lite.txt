@@ -1,0 +1,10 @@
+# Same as requirements.txt WITHOUT torch/transformers, for small hosts (<1 GB RAM).
+# The app runs fully; only the AI footprint endpoint returns 503 "model unavailable".
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+sqlalchemy==2.0.36
+pydantic==2.10.4
+shapely==2.0.6
+pillow==11.0.0
+numpy==2.2.1
+python-multipart==0.0.20

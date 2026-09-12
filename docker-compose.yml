@@ -1,0 +1,17 @@
+# Optional: real PostgreSQL + PostGIS instead of the default SQLite file.
+#   docker compose up -d
+#   export DATABASE_URL=postgresql+psycopg://tribhoomi:tribhoomi@localhost:5432/tribhoomi
+#   cd backend && .venv/bin/pip install "psycopg[binary]" && .venv/bin/python -m seed.seed
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: tribhoomi
+      POSTGRES_PASSWORD: tribhoomi
+      POSTGRES_DB: tribhoomi
+    ports: ["5432:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backend/schema_postgis.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+volumes:
+  pgdata:

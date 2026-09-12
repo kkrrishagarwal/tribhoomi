@@ -1,0 +1,713 @@
+{
+  "type": "FeatureCollection",
+  "_comment": "Hand-crafted demo parcels across the NCR: Noida, Greater Noida (UP 09/141), Gurugram (Haryana 06/086) and Delhi (07). Coordinates are lon/lat (WGS84). Units and floors are generated from the 'building' spec by seed.py so the ULPIN engine is the single source of IDs.",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Tribhoomi Tower",
+        "state": "Uttar Pradesh",
+        "district": "Gautam Buddh Nagar",
+        "village_ward": "Greater Noida \u2013 Sector 10",
+        "state_code": 9,
+        "district_code": 141,
+        "village_ward_code": 31,
+        "parcel_no": 45,
+        "land_use": "mixed",
+        "building": {
+          "name": "Tribhoomi Tower",
+          "num_floors": 12,
+          "num_basements": 1,
+          "floor_height_m": 3.2,
+          "units_per_floor": 3,
+          "ground_floor_usage": "commercial",
+          "basement_usage": "parking",
+          "footprint_inset_m": 4,
+          "deliberate_overlap": {
+            "floor": 7,
+            "unit": 3,
+            "shift_m": -2.5,
+            "_why": "Unit 7-C's western wall was surveyed 2.5 m into Unit 7-B: the validator must flag this"
+          }
+        },
+        "underground_layers": [
+          {
+            "layer_type": "utility",
+            "name": "GNIDA water & sewer trunk",
+            "top_m": -1.5,
+            "bottom_m": -3.0,
+            "operator": "Greater Noida Industrial Development Authority",
+            "strip": {
+              "axis": "x",
+              "offset_m": -23.5,
+              "width_m": 3
+            }
+          }
+        ],
+        "builder": "Tribhoomi Developers Pvt Ltd",
+        "unsold_top_floors": 2
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              77.479,
+              28.5715
+            ],
+            [
+              77.4796,
+              28.5715
+            ],
+            [
+              77.4796,
+              28.57105
+            ],
+            [
+              77.479,
+              28.57105
+            ],
+            [
+              77.479,
+              28.5715
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Aravalli Residency",
+        "state": "Uttar Pradesh",
+        "district": "Gautam Buddh Nagar",
+        "village_ward": "Noida \u2013 Sector 18",
+        "state_code": 9,
+        "district_code": 141,
+        "village_ward_code": 18,
+        "parcel_no": 46,
+        "land_use": "residential",
+        "building": {
+          "name": "Aravalli Residency",
+          "num_floors": 8,
+          "num_basements": 2,
+          "floor_height_m": 3.0,
+          "units_per_floor": 4,
+          "ground_floor_usage": "residential",
+          "basement_usage": "parking",
+          "footprint_inset_m": 3
+        },
+        "underground_layers": [
+          {
+            "layer_type": "metro",
+            "name": "DMRC Blue Line underground utility corridor",
+            "top_m": -5.0,
+            "bottom_m": -12.0,
+            "operator": "Delhi Metro Rail Corporation",
+            "strip": {
+              "axis": "y",
+              "offset_m": 6,
+              "width_m": 9
+            },
+            "_why": "Tunnel passes at -5 m; basement 2 reaches -6 m, so the validator flags an underground clash"
+          }
+        ],
+        "builder": "Aravalli Builders LLP",
+        "unsold_top_floors": 2
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              77.325,
+              28.5705
+            ],
+            [
+              77.32560000000001,
+              28.5705
+            ],
+            [
+              77.32560000000001,
+              28.57
+            ],
+            [
+              77.325,
+              28.57
+            ],
+            [
+              77.325,
+              28.5705
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Yamuna Commercial Plaza",
+        "state": "Uttar Pradesh",
+        "district": "Ghaziabad",
+        "village_ward": "Ghaziabad \u2013 Vaishali",
+        "state_code": 9,
+        "district_code": 140,
+        "village_ward_code": 7,
+        "parcel_no": 47,
+        "land_use": "commercial",
+        "building": {
+          "name": "Yamuna Commercial Plaza",
+          "num_floors": 5,
+          "num_basements": 1,
+          "floor_height_m": 4.0,
+          "units_per_floor": 2,
+          "ground_floor_usage": "commercial",
+          "basement_usage": "utility",
+          "all_floors_usage": "commercial",
+          "footprint_inset_m": 3
+        },
+        "underground_layers": [
+          {
+            "layer_type": "utility",
+            "name": "PVVNL 33 kV power cable duct",
+            "top_m": -1.0,
+            "bottom_m": -2.0,
+            "operator": "Paschimanchal Vidyut Vitran Nigam Ltd",
+            "strip": {
+              "axis": "x",
+              "offset_m": 23.5,
+              "width_m": 2
+            }
+          }
+        ],
+        "air_rights": [
+          {
+            "name": "Pedestrian skywalk to Vaishali Metro station",
+            "top_m": 9.5,
+            "bottom_m": 6.0,
+            "operator": "Ghaziabad Nagar Nigam",
+            "strip": {
+              "axis": "x",
+              "offset_m": 0,
+              "width_m": 5
+            }
+          }
+        ],
+        "builder": "Yamuna Infra Ltd",
+        "unsold_top_floors": 2
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              77.339,
+              28.644
+            ],
+            [
+              77.3397,
+              28.644
+            ],
+            [
+              77.3397,
+              28.643549999999998
+            ],
+            [
+              77.339,
+              28.643549999999998
+            ],
+            [
+              77.339,
+              28.644
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Sector 62 IT Tower",
+        "state": "Uttar Pradesh",
+        "district": "Gautam Buddh Nagar",
+        "village_ward": "Noida \u2013 Sector 62",
+        "state_code": 9,
+        "district_code": 141,
+        "village_ward_code": 62,
+        "parcel_no": 48,
+        "land_use": "commercial",
+        "builder": "InfoPark Developers Pvt Ltd",
+        "unsold_top_floors": 2,
+        "building": {
+          "name": "Sector 62 IT Tower",
+          "num_floors": 10,
+          "num_basements": 2,
+          "floor_height_m": 3.8,
+          "units_per_floor": 2,
+          "ground_floor_usage": "commercial",
+          "all_floors_usage": "commercial",
+          "basement_usage": "parking",
+          "footprint_inset_m": 4
+        },
+        "underground_layers": [
+          {
+            "layer_type": "utility",
+            "name": "IGL natural gas pipeline",
+            "top_m": -1.2,
+            "bottom_m": -2.2,
+            "operator": "Indraprastha Gas Ltd",
+            "strip": {
+              "axis": "y",
+              "offset_m": -34,
+              "width_m": 2
+            }
+          }
+        ]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              77.364,
+              28.6285
+            ],
+            [
+              77.36475,
+              28.6285
+            ],
+            [
+              77.36475,
+              28.628
+            ],
+            [
+              77.364,
+              28.628
+            ],
+            [
+              77.364,
+              28.6285
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Gaur Heights, Sector 16C",
+        "state": "Uttar Pradesh",
+        "district": "Gautam Buddh Nagar",
+        "village_ward": "Greater Noida West \u2013 Sector 16C",
+        "state_code": 9,
+        "district_code": 141,
+        "village_ward_code": 116,
+        "parcel_no": 49,
+        "land_use": "residential",
+        "builder": "Gaur Infra Ltd",
+        "unsold_top_floors": 2,
+        "building": {
+          "name": "Gaur Heights, Sector 16C",
+          "num_floors": 15,
+          "num_basements": 1,
+          "floor_height_m": 3.0,
+          "units_per_floor": 4,
+          "ground_floor_usage": "commercial",
+          "basement_usage": "parking",
+          "footprint_inset_m": 5
+        },
+        "underground_layers": [
+          {
+            "layer_type": "utility",
+            "name": "GNIDA sewer trunk",
+            "top_m": -2.0,
+            "bottom_m": -3.5,
+            "operator": "Greater Noida Industrial Development Authority",
+            "strip": {
+              "axis": "x",
+              "offset_m": -31,
+              "width_m": 3
+            }
+          }
+        ]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              77.4295,
+              28.6085
+            ],
+            [
+              77.4303,
+              28.6085
+            ],
+            [
+              77.4303,
+              28.6079
+            ],
+            [
+              77.4295,
+              28.6079
+            ],
+            [
+              77.4295,
+              28.6085
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Millennium Trade Tower, Cyber City",
+        "state": "Haryana",
+        "district": "Gurugram",
+        "village_ward": "Gurugram \u2013 DLF Phase 3",
+        "state_code": 6,
+        "district_code": 86,
+        "village_ward_code": 33,
+        "parcel_no": 50,
+        "land_use": "commercial",
+        "builder": "Cyber Realty Pvt Ltd",
+        "unsold_top_floors": 2,
+        "building": {
+          "name": "Millennium Trade Tower, Cyber City",
+          "num_floors": 15,
+          "num_basements": 3,
+          "floor_height_m": 4.0,
+          "units_per_floor": 3,
+          "ground_floor_usage": "commercial",
+          "all_floors_usage": "commercial",
+          "basement_usage": "parking",
+          "footprint_inset_m": 5
+        },
+        "underground_layers": [
+          {
+            "layer_type": "utility",
+            "name": "DHBVN 66 kV cable duct",
+            "top_m": -1.0,
+            "bottom_m": -2.0,
+            "operator": "Dakshin Haryana Bijli Vitran Nigam",
+            "strip": {
+              "axis": "x",
+              "offset_m": -31,
+              "width_m": 2
+            }
+          }
+        ],
+        "air_rights": [
+          {
+            "name": "Rapid Metro Gurugram elevated viaduct",
+            "top_m": 14.0,
+            "bottom_m": 9.0,
+            "operator": "DMRC (Rapid Metro)",
+            "strip": {
+              "axis": "y",
+              "offset_m": 0,
+              "width_m": 9
+            }
+          }
+        ]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              77.088,
+              28.496
+            ],
+            [
+              77.08879999999999,
+              28.496
+            ],
+            [
+              77.08879999999999,
+              28.4954
+            ],
+            [
+              77.088,
+              28.4954
+            ],
+            [
+              77.088,
+              28.496
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Sohna Road Residency, Sector 49",
+        "state": "Haryana",
+        "district": "Gurugram",
+        "village_ward": "Gurugram \u2013 Sector 49",
+        "state_code": 6,
+        "district_code": 86,
+        "village_ward_code": 49,
+        "parcel_no": 51,
+        "land_use": "residential",
+        "builder": "Sohna Homes LLP",
+        "unsold_top_floors": 2,
+        "building": {
+          "name": "Sohna Road Residency, Sector 49",
+          "num_floors": 12,
+          "num_basements": 2,
+          "floor_height_m": 3.1,
+          "units_per_floor": 4,
+          "ground_floor_usage": "residential",
+          "basement_usage": "parking",
+          "footprint_inset_m": 4
+        },
+        "underground_layers": [
+          {
+            "layer_type": "utility",
+            "name": "GMDA storm-water drain",
+            "top_m": -1.5,
+            "bottom_m": -3.0,
+            "operator": "Gurugram Metropolitan Development Authority",
+            "strip": {
+              "axis": "x",
+              "offset_m": -29,
+              "width_m": 3
+            }
+          }
+        ]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              77.044,
+              28.412
+            ],
+            [
+              77.04469999999999,
+              28.412
+            ],
+            [
+              77.04469999999999,
+              28.41145
+            ],
+            [
+              77.044,
+              28.41145
+            ],
+            [
+              77.044,
+              28.412
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Connaught Place Block K",
+        "state": "Delhi",
+        "district": "New Delhi",
+        "village_ward": "New Delhi \u2013 Connaught Place",
+        "state_code": 7,
+        "district_code": 94,
+        "village_ward_code": 12,
+        "parcel_no": 52,
+        "land_use": "mixed",
+        "builder": "Rajdhani Estates Pvt Ltd",
+        "unsold_top_floors": 2,
+        "building": {
+          "name": "Connaught Place Block K",
+          "num_floors": 6,
+          "num_basements": 1,
+          "floor_height_m": 3.6,
+          "units_per_floor": 3,
+          "ground_floor_usage": "commercial",
+          "basement_usage": "utility",
+          "footprint_inset_m": 3
+        },
+        "underground_layers": [
+          {
+            "layer_type": "metro",
+            "name": "DMRC Rajiv Chowk interchange tunnel",
+            "top_m": -9.0,
+            "bottom_m": -17.0,
+            "operator": "Delhi Metro Rail Corporation",
+            "strip": {
+              "axis": "y",
+              "offset_m": 8,
+              "width_m": 10
+            }
+          }
+        ]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              77.218,
+              28.632
+            ],
+            [
+              77.21860000000001,
+              28.632
+            ],
+            [
+              77.21860000000001,
+              28.63155
+            ],
+            [
+              77.218,
+              28.63155
+            ],
+            [
+              77.218,
+              28.632
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Nehru Place Commercial Complex",
+        "state": "Delhi",
+        "district": "South Delhi",
+        "village_ward": "South Delhi \u2013 Nehru Place",
+        "state_code": 7,
+        "district_code": 98,
+        "village_ward_code": 41,
+        "parcel_no": 53,
+        "land_use": "commercial",
+        "builder": "Nehru Place Traders Association",
+        "unsold_top_floors": 2,
+        "building": {
+          "name": "Nehru Place Commercial Complex",
+          "num_floors": 8,
+          "num_basements": 1,
+          "floor_height_m": 3.6,
+          "units_per_floor": 3,
+          "ground_floor_usage": "commercial",
+          "all_floors_usage": "commercial",
+          "basement_usage": "parking",
+          "footprint_inset_m": 4
+        },
+        "underground_layers": [
+          {
+            "layer_type": "utility",
+            "name": "BSES 66 kV cable duct",
+            "top_m": -1.0,
+            "bottom_m": -2.0,
+            "operator": "BSES Rajdhani Power Ltd",
+            "strip": {
+              "axis": "x",
+              "offset_m": -27,
+              "width_m": 2
+            }
+          }
+        ]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              77.2505,
+              28.5495
+            ],
+            [
+              77.2512,
+              28.5495
+            ],
+            [
+              77.2512,
+              28.549
+            ],
+            [
+              77.2505,
+              28.549
+            ],
+            [
+              77.2505,
+              28.5495
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Dwarka Sector 10 CGHS Tower",
+        "state": "Delhi",
+        "district": "South West Delhi",
+        "village_ward": "South West Delhi \u2013 Dwarka Sector 10",
+        "state_code": 7,
+        "district_code": 97,
+        "village_ward_code": 10,
+        "parcel_no": 54,
+        "land_use": "residential",
+        "builder": "Dwarka Cooperative Group Housing Society",
+        "unsold_top_floors": 2,
+        "building": {
+          "name": "Dwarka Sector 10 CGHS Tower",
+          "num_floors": 9,
+          "num_basements": 1,
+          "floor_height_m": 3.0,
+          "units_per_floor": 4,
+          "ground_floor_usage": "residential",
+          "basement_usage": "parking",
+          "footprint_inset_m": 4
+        },
+        "underground_layers": [
+          {
+            "layer_type": "utility",
+            "name": "DJB water trunk main",
+            "top_m": -1.5,
+            "bottom_m": -3.0,
+            "operator": "Delhi Jal Board",
+            "strip": {
+              "axis": "y",
+              "offset_m": 32.5,
+              "width_m": 3
+            }
+          }
+        ]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              77.056,
+              28.583
+            ],
+            [
+              77.05669999999999,
+              28.583
+            ],
+            [
+              77.05669999999999,
+              28.582449999999998
+            ],
+            [
+              77.056,
+              28.582449999999998
+            ],
+            [
+              77.056,
+              28.583
+            ]
+          ]
+        ]
+      }
+    }
+  ]
+}

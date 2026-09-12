@@ -1,0 +1,13 @@
+backend/.venv/
+backend/tribhoomi.db
+backend/__pycache__/
+**/__pycache__/
+.pytest_cache/
+frontend/node_modules/
+frontend/.next/
+frontend/.env.local
+frontend/public/cesium/
+node_modules/
+.next/
+*.db
+.env.local
