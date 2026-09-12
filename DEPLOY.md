@@ -43,6 +43,20 @@ container, so it resets whenever the Space restarts or sleeps (free Spaces sleep
 inactivity; the first visit wakes it in ~1 minute). That is fine for a demo: every restart is
 a clean demo state.
 
+## Option A2 — Vercel frontend + the Hugging Face Space as backend
+
+Want a `*.vercel.app` URL and the full app (AI included)? Deploy Option A first; the Space's
+URL also serves the API (`https://<you>-tribhoomi.hf.space/api/health`). Then on Vercel:
+import the repo, Root Directory `frontend`, and set `API_URL` to the Space URL (no trailing
+slash) plus `NEXT_PUBLIC_CESIUM_TOKEN` and `NEXT_PUBLIC_PUBLIC_URL` (= the Vercel URL).
+
+## Why not Vercel for the backend?
+
+Vercel runs serverless functions with a read-only, wiped-between-calls filesystem: the SQLite
+registry would lose changes, and the AI model's dependencies exceed the function size limit.
+Moving to hosted Postgres and dropping the AI would make it possible, but it is not worth the
+risk for the demo.
+
 ## Option B — Vercel (frontend) + Render (backend)
 
 Backend on Render (free tier: 512 MB RAM, so AI is disabled with `AI=0`):
