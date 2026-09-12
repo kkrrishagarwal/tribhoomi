@@ -1,5 +1,6 @@
 # Render blueprint — ONE free web service running frontend + backend from the root Dockerfile.
 # Free tier (512 MB RAM, no card) => AI=0: everything works except the AI footprint page.
+# Render exposes env vars to the Docker build, and the Dockerfile declares them as ARGs.
 services:
   - type: web
     name: tribhoomi
@@ -7,11 +8,13 @@ services:
     plan: free
     dockerfilePath: ./Dockerfile
     dockerContext: .
-    dockerBuildArgs:
-      AI: "0"
+    healthCheckPath: /api/health
     envVars:
+      - key: AI
+        value: "0"
       - key: CORS_ORIGINS
         value: "*"
+      - key: NEXT_PUBLIC_CESIUM_TOKEN
+        sync: false     # paste your Cesium ion token in the Render dashboard
       - key: NEXT_PUBLIC_PUBLIC_URL
-        sync: false     # set in the Render dashboard to https://<service>.onrender.com
-    healthCheckPath: /api/health
+        sync: false     # https://<service-name>.onrender.com
