@@ -198,6 +198,32 @@ export type MarketProject = {
 export type MarketFeature = { type: "Feature"; id: number; geometry: { type: "Point"; coordinates: [number, number] }; properties: MarketProject };
 export type MarketContext = { type: "FeatureCollection"; features: MarketFeature[]; unmapped: { id: number; properties: MarketProject }[]; summary: { projects: number; mapped: number; by_confidence: Record<string, number>; disclaimer: string } };
 
+// ---------------- property lifecycle (builder -> validation -> authority -> passport)
+export type VerificationStatus = "draft" | "pending" | "verified" | "rejected" | "conflict";
+export type Check = { key: string; ok: boolean; text: string; why?: string; severity?: "error" | "warning" };
+export type Validation = { valid: boolean; score: number; checks: Check[]; conflicts: { with_unit: string; with_tpid: string; overlap_sqm: number; with_volume: { min: number[]; max: number[] } }[]; drawn_area_sqm: number; technical: string[] };
+export type Integrity = { score: number; parts: Record<string, number> };
+export type PropertyUnit = {
+  id?: number; tpid: string; land_record_id: string; label: string; unit_type: string; usage_type: string; area_sqm: number; area_sqft: number;
+  floor_number: number; floor_label: string; building: { id: number; name: string; num_floors: number };
+  project: { id: number; name: string; city: string; locality: string; developer: string; land_record_id: string; is_demo: boolean };
+  verification_status: VerificationStatus; status_label: string; verification_id: string; verified_at: string | null; sale_status: string; has_owner: boolean;
+  flags: UnitFlags; integrity: Integrity; version_count: number; volume?: { min: number[]; max: number[] }; footprint?: GeoPolygon;
+  owner?: { name: string; email?: string; registered_on: string; registration_no?: string } | null;
+};
+export type HistoryItem = { at: string; kind: string; text: string; tone: "ok" | "warn" | "bad" | "neutral"; version?: number; approval_status?: string };
+export type PropertyPage = PropertyUnit & {
+  history: HistoryItem[]; versions: { version_number: number; created_at: string; approval_status: string; plot_number: string; geometry: GeoPolygon; bounding_volume: { min: number[]; max: number[] }; area_sqm: number; changed_by: string; reason: string }[];
+  change: { previous_sqm: number; current_sqm: number; difference_sqm: number; previous_sqft: number; current_sqft: number; moved_m: number; previous_label: string; current_label: string; before: GeoPolygon; after: GeoPolygon; approved: boolean } | null;
+  pending_modification: ChangeRequest | null; disputes_open: number; demo_dataset: boolean;
+};
+export type VerifyCheck = { text: string; ok: boolean; detail: string };
+export type VerifyResultV2 = { tpid: string; result: string; tone: "ok" | "warn" | "bad"; checks: VerifyCheck[]; integrity: Integrity; explanation: string; demo_dataset: boolean };
+export type ProjectSummary = { id: number; name: string; developer: string; city: string; locality: string; address: string; project_type: string; land_record_id: string; is_demo: boolean; status: string; counts: Record<string, number>; centroid: { lat: number; lng: number } };
+export type ProjectDashboard = ProjectSummary & { buildings: { id: number; name: string; num_floors: number; num_basements: number; land_record_id: string; units: number; pending: number; verified: number; conflicts: number }[]; parcel_local: number[][] };
+export type BuildingDetail = { id: number; name: string; num_floors: number; num_basements: number; land_record_id: string; project: ProjectSummary; footprint_local: number[][]; parcel_local: number[][]; floors: { floor_number: number; label: string; base_elevation_m: number; height_m: number; units: PropertyUnit[] }[] };
+export type AuditRow = { id: number; at: string; actor: string; role: string; action: string; label: string; subject: string; previous_value: string; new_value: string; status: string; note: string; unit_id: number | null; parcel_id: number | null };
+
 async function get<T>(path: string): Promise<T> {
   const r = await fetch(path, { cache: "no-store", headers: sessionHeaders() });
   if (!r.ok) throw new Error(await errText(r));
@@ -249,6 +275,24 @@ export const api = {
   adminOverview: () => get<{ open_disputes: Dispute[]; resolved_disputes: Dispute[]; pending_requests: ChangeRequest[]; decided_requests: ChangeRequest[]; tampered_units: { unit_ulpin: string; label: string; parcel_id: number }[]; counts: Record<string, number> }>("/api/admin/overview"),
   setDisputeStatus: (id: number, status: string) => send<{ ok: boolean; dispute: Dispute }>("PATCH", `/api/admin/disputes/${id}`, { status }),
   notifications: () => get<Notice[]>("/api/notifications"),
+  // lifecycle
+  builderDashboard: () => get<{ builder: string; demo: boolean; counts: Record<string, number>; projects: ProjectSummary[] }>("/api/builder/dashboard"),
+  createProject: (body: Record<string, unknown>) => send<{ ok: boolean; message: string; project: ProjectSummary }>("POST", "/api/builder/projects", body),
+  project: (id: number | string) => get<ProjectDashboard>(`/api/projects/${id}`),
+  addBuilding: (projectId: number | string, body: Record<string, unknown>) => send<{ ok: boolean; message: string; building_id: number }>("POST", `/api/builder/projects/${projectId}/buildings`, body),
+  building: (id: number | string) => get<BuildingDetail>(`/api/buildings/${id}`),
+  validateUnit: (body: Record<string, unknown>) => send<Validation>("POST", "/api/builder/units/validate", body),
+  createUnit: (body: Record<string, unknown>) => send<{ ok: boolean; unit: PropertyUnit; validation: Validation; message: string }>("POST", "/api/builder/units", body),
+  submitUnit: (ident: string) => send<{ ok: boolean; message: string; unit: PropertyUnit; validation: Validation }>("POST", `/api/builder/units/${encodeURIComponent(ident)}/submit`),
+  builderUnits: () => get<{ units: PropertyUnit[] }>("/api/builder/units"),
+  audit: (q: { unit?: string; project_id?: number } = {}) => get<AuditRow[]>(`/api/audit?${new URLSearchParams(Object.entries(q).filter(([, v]) => v !== undefined).map(([k, v]) => [k, String(v)]))}`),
+  authorityDashboard: () => get<{ authority: string; counts: Record<string, number>; pending: PropertyUnit[]; conflicts: PropertyUnit[] }>("/api/authority/dashboard"),
+  authorityReview: (ident: string) => get<{ unit: PropertyUnit; validation: Validation; building: { id: number; name: string; footprint_local: number[][]; num_floors: number }; parcel: { id: number; name: string; local: number[][]; land_record_id: string; is_demo: boolean }; neighbours: { label: string; tpid: string; volume: { min: number[]; max: number[] }; status: string }[]; versions: PlotVersion[]; change_requests: ChangeRequest[]; disputes: Dispute[]; audit: AuditRow[] }>(`/api/authority/review/${encodeURIComponent(ident)}`),
+  authorityDecide: (ident: string, decision: "approve" | "reject" | "changes", note = "") => send<{ ok: boolean; message: string; unit: PropertyUnit }>("POST", `/api/authority/units/${encodeURIComponent(ident)}/decide`, { decision, note }),
+  discover: (q: string, status = "") => get<{ count: number; results: PropertyUnit[]; projects: { id: number; name: string; city: string }[] }>(`/api/discover?q=${encodeURIComponent(q)}&status=${status}`),
+  property: (ident: string) => get<PropertyPage>(`/api/property/${encodeURIComponent(ident)}`),
+  propertyVerify: (ident: string) => get<VerifyResultV2>(`/api/property/${encodeURIComponent(ident)}/verify`),
+  ownerProperties: () => get<{ owner: string; properties: PropertyPage[] }>("/api/owner/properties"),
   aiStatus: () => get<{ model_id: string; loaded: boolean; error: string | null }>("/api/ai/status"),
   extract: async (file?: File) => {
     const fd = new FormData();

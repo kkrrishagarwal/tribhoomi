@@ -4,7 +4,7 @@
  * sent as X-Role / X-User headers with every API call. No passwords — the demo
  * switches roles from the header bar.
  */
-export type Role = "public" | "builder" | "investor" | "admin";
+export type Role = "public" | "builder" | "investor" | "owner" | "admin";
 export type Session = { role: Role; user: string; name: string };
 
 const KEY = "tribhoomi.session";

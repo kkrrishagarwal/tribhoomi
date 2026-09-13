@@ -11,7 +11,8 @@ from dataclasses import dataclass
 
 from fastapi import Depends, Header, HTTPException
 
-ROLES = ("builder", "investor", "admin", "public")
+ROLES = ("builder", "investor", "owner", "admin", "public")
+ALIASES = {"authority": "admin", "buyer": "investor"}
 
 
 @dataclass
@@ -21,7 +22,7 @@ class Actor:
 
 
 def current_actor(x_role: str = Header("public"), x_user: str = Header("")) -> Actor:
-    role = x_role.lower().strip()
+    role = ALIASES.get(x_role.lower().strip(), x_role.lower().strip())
     if role not in ROLES:
         raise HTTPException(400, f"unknown role {role!r}")
     return Actor(role=role, user=x_user.strip())

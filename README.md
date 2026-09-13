@@ -8,29 +8,31 @@ app_port: 7860
 pinned: false
 ---
 
-# त्रिभूमि Tribhoomi — 3D ULPIN Generation & Vertical Property Mapping
+# त्रिभूमि Tribhoomi — property identity & integrity platform
 
-Working prototype for **SIH26011** (Ministry of Rural Development, Dept. of Land Resources).
+Prototype for **SIH26011** (Ministry of Rural Development, Dept. of Land Resources).
 
-A surface parcel already has a flat 14-digit **ULPIN**. This app extends it *vertically*:
-every building, level, unit, basement, utility corridor and air-rights band gets its own
-hierarchical **3D ULPIN** that truncates back to the parcel's 2D ULPIN. A topology validator
-flags volumes that overlap, a pretrained segmentation model shows how footprints could be
-extracted from imagery automatically, and a **builder–investor integrity module** makes every
-post-sale change to a plot record require the owner's approval, with an append-only version
-history that anyone can verify by ULPIN.
+**The product story:** a builder creates a property → Tribhoomi validates its identity →
+an authority verifies it → the property receives a persistent digital identity (a
+**Tribhoomi Property ID**, e.g. `TRB-TA1-F08-U03`) → owners and investors can independently
+verify its integrity → every later change is recorded and traceable.
 
 ```
- 09 - 141 - 0018 - 00046 - B01 - F04 - U03 - A
- │     │      │       │      │     │     │    └ Layer: S surface · A above ground · G underground · R air-rights
- │     │      │       │      │     │     └───── Unit    (U00 = whole level)
- │     │      │       │      │     └─────────── Level   (F00 = whole building, F01 = ground floor, L01 = basement 1)
- │     │      │       │      └───────────────── Building (B00 = the parcel itself)
- └─────┴──────┴───────┴──────────────────────── existing 2D ULPIN, 14 digits when compacted
+🏗️ BUILDER   create project → add building → add unit → draw boundary → automatic validation → submit
+🏛️ AUTHORITY review evidence → approve / request changes / reject   (every decision is audited)
+🪪 IDENTITY  Tribhoomi Property ID · Property Passport · QR · integrity score
+💰 INVESTOR  search → verify before you invest → history → before/after → integrity report
+🏠 OWNER     my property → change detection → approve/reject modifications → disputes
 ```
 
-Zero in any vertical segment means "the whole thing one level up", which keeps every ID unique
-and lets `parent_of()` walk up the hierarchy by zeroing one segment.
+Roles are **simulated** (Demo Mode); the server still enforces what each role may do: a
+builder cannot verify their own unit, an investor cannot edit, and verified geometry is never
+overwritten — a modification becomes a new version only after approval.
+
+**Positioning.** The TPID is Tribhoomi's own identifier. The underlying engine also produces
+ULPIN-*format* technical land-record IDs for parcels, buildings, levels and units; these are
+shown only under "Advanced technical details" and are not official ULPINs. All data is a
+demonstration dataset.
 
 ## Run it
 
@@ -65,9 +67,19 @@ npm install && npm run dev
 The first click on **AI Footprint → Run** downloads `nvidia/segformer-b0-finetuned-ade-512-512`
 (~15 MB) from Hugging Face and caches it; later runs take a few seconds on CPU.
 
+## Pages by role
+
+| Role | Pages |
+|---|---|
+| Public / Investor | `/` landing · `/discover` search · `/property/<TPID>` (passport, verify before you invest, history, before/after, report) · `/passport/<TPID>` public QR page |
+| Owner | `/owner` my property · `/changes` approve/reject modifications, disputes |
+| Builder | `/builder` dashboard · `/builder/projects/new` · project → building → floor → **boundary editor** → validation → submit · `/builder/modify/<TPID>` · units · audit |
+| Authority | `/authority` command center · pending · `/authority/review/<TPID>` evidence + decision · conflicts · disputes · audit log |
+| Advanced | `/map` GIS view · `/globe` Cesium · `/parcel/<id>` 3D · `/ulpin` ID engine · `/ai` · `/dashboard` |
+
 ## Roles
 
-There is no login. The dropdown in the header switches identity, and every API call carries
+There is no login. Sign-in pages (`/signin/<role>`) and the header dropdown switch identity, and every API call carries
 `X-Role` / `X-User` headers that the backend checks (`app/auth.py`). Swap that dependency for
 real JWT auth later without touching the endpoints.
 

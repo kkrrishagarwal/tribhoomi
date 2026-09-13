@@ -29,6 +29,9 @@ class Parcel(Base):
     parcel_no: Mapped[int] = mapped_column(Integer)
     land_use: Mapped[str] = mapped_column(String(40), default="mixed")
     builder: Mapped[str] = mapped_column(String(120), default="")   # the developer who registered the layout
+    city: Mapped[str] = mapped_column(String(60), default="")       # project-facing fields (a parcel IS a project)
+    address: Mapped[str] = mapped_column(String(200), default="")
+    is_demo_parcel: Mapped[bool] = mapped_column(Boolean, default=True)
     area_sqm: Mapped[float] = mapped_column(Float, default=0)
     geometry: Mapped[str] = mapped_column(Text)  # GeoJSON Polygon (WGS84 lon/lat)
     centroid_lat: Mapped[float] = mapped_column(Float)
@@ -92,6 +95,15 @@ class Unit(Base):
     label: Mapped[str] = mapped_column(String(40))       # e.g. "Flat 7-B"
     area_sqm: Mapped[float] = mapped_column(Float)
     usage_type: Mapped[str] = mapped_column(String(20))  # residential | commercial | utility | parking
+    unit_type: Mapped[str] = mapped_column(String(30), default="")        # e.g. "3 BHK", "Shop", "Office"
+    sale_status: Mapped[str] = mapped_column(String(20), default="available")  # available | reserved | sold | occupied
+    # lifecycle: draft -> pending -> verified | rejected ; 'conflict' when validation finds an overlap
+    verification_status: Mapped[str] = mapped_column(String(20), default="draft")
+    verification_id: Mapped[str] = mapped_column(String(40), default="")
+    verified_by: Mapped[str] = mapped_column(String(120), default="")
+    verified_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_by: Mapped[str] = mapped_column(String(120), default="")
     # bounding volume in building-local metres; z is absolute elevation (0 = ground)
     min_x: Mapped[float] = mapped_column(Float)
     min_y: Mapped[float] = mapped_column(Float)
@@ -106,6 +118,15 @@ class Unit(Base):
                                                        order_by="PlotVersion.version_number")
     change_requests: Mapped[list[ChangeRequest]] = relationship(back_populates="unit", cascade="all, delete-orphan")
     disputes: Mapped[list[Dispute]] = relationship(back_populates="unit", cascade="all, delete-orphan")
+
+    @property
+    def tpid(self) -> str:
+        """Tribhoomi Property ID: readable identity linking project, building, floor and unit."""
+        b = self.floor.building
+        initials = "".join(w[0] for w in b.name.replace("-", " ").split() if w[0].isalnum())[:3].upper() or "B"
+        f = self.floor.floor_number
+        fl = f"B{-f:02d}" if f < 0 else f"F{f:02d}"
+        return f"TRB-{initials}{b.parcel.parcel_no}-{fl}-U{self.unit_no:02d}"
 
     @property
     def is_locked(self) -> bool:
@@ -260,3 +281,24 @@ class MarketContextProject(Base):
     data_date: Mapped[str] = mapped_column(String(10))
     confidence: Mapped[str] = mapped_column(String(20))    # verified | listing_based | unknown
     notes: Mapped[str] = mapped_column(Text, default="")
+
+
+# --------------------------------------------------------------------------- #
+# Audit trail — one row per important action
+# --------------------------------------------------------------------------- #
+
+class AuditEvent(Base):
+    __tablename__ = "audit_events"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    at: Mapped[datetime] = mapped_column(DateTime, index=True)
+    actor: Mapped[str] = mapped_column(String(120))
+    role: Mapped[str] = mapped_column(String(20))
+    action: Mapped[str] = mapped_column(String(60))         # e.g. unit.created, unit.submitted, unit.verified
+    unit_id: Mapped[int | None] = mapped_column(ForeignKey("units.id"), nullable=True, index=True)
+    parcel_id: Mapped[int | None] = mapped_column(ForeignKey("parcels.id"), nullable=True, index=True)
+    subject: Mapped[str] = mapped_column(String(80), default="")   # TPID / ULPIN / project name
+    previous_value: Mapped[str] = mapped_column(Text, default="")
+    new_value: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(30), default="")
+    note: Mapped[str] = mapped_column(Text, default="")

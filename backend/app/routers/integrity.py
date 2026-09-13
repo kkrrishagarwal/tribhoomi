@@ -16,11 +16,15 @@ router = APIRouter(prefix="/api", tags=["integrity"])
 
 
 def _unit(db: Session, ulpin: str) -> Unit:
-    u = (db.query(Unit).options(selectinload(Unit.versions), selectinload(Unit.change_requests),
-                                selectinload(Unit.disputes), selectinload(Unit.ownerships))
-         .filter(Unit.unit_ulpin == ulpin.upper()).first())
+    q = db.query(Unit).options(selectinload(Unit.versions), selectinload(Unit.change_requests),
+                               selectinload(Unit.disputes), selectinload(Unit.ownerships))
+    ident = ulpin.strip().upper()
+    if ident.startswith("TRB-"):   # Tribhoomi Property ID
+        u = next((x for x in q.all() if x.tpid == ident), None)
+    else:
+        u = q.filter(Unit.unit_ulpin == ident).first()
     if not u:
-        raise HTTPException(404, f"no unit with ULPIN {ulpin}")
+        raise HTTPException(404, f"No property found for {ulpin}.")
     return u
 
 
@@ -141,14 +145,14 @@ def request_change(ulpin: str, body: ChangeBody, actor: Actor = Depends(require_
     vol = svc.shifted_volume(u, body.dx, body.dy, body.dw, body.dd)
     cr = _run(svc.create_change_request, db, u, actor.user, vol, body.plot_number or u.label, body.reason)
     db.commit()
-    return {"ok": True, "message": f"Change request #{cr.id} sent to {cr.affected_owner.owner_name} for approval.",
+    return {"ok": True, "message": f"Modification request #{cr.id} submitted" + (f"; {cr.affected_owner.owner_name} and the authority have been notified." if cr.affected_owner else " to the authority for review."),
             "change_request": svc.change_request_dict(cr)}
 
 
 # ------------------------------------------------------------------ investor
 
 @router.get("/investor/overview")
-def investor_overview(actor: Actor = Depends(require_role("investor", "admin")), db: Session = Depends(get_db)):
+def investor_overview(actor: Actor = Depends(require_role("investor", "owner", "admin")), db: Session = Depends(get_db)):
     email = actor.user.lower()
     units = (db.query(Unit).options(selectinload(Unit.ownerships), selectinload(Unit.versions),
                                     selectinload(Unit.change_requests), selectinload(Unit.disputes)).all())
@@ -174,11 +178,11 @@ class DecideBody(BaseModel):
 
 
 @router.post("/change-requests/{cr_id}/decide")
-def decide(cr_id: int, body: DecideBody, actor: Actor = Depends(require_role("investor", "admin")), db: Session = Depends(get_db)):
+def decide(cr_id: int, body: DecideBody, actor: Actor = Depends(require_role("investor", "owner", "admin")), db: Session = Depends(get_db)):
     cr = db.get(ChangeRequest, cr_id)
     if not cr:
         raise HTTPException(404, "change request not found")
-    email = actor.user if actor.role == "investor" else (cr.affected_owner.owner_email if cr.affected_owner else "")
+    email = actor.user if actor.role in ("investor", "owner") else (cr.affected_owner.owner_email if cr.affected_owner else "")
     _run(svc.decide_change_request, db, cr, body.decision, email, body.note)
     db.commit()
     return {"ok": True, "change_request": svc.change_request_dict(cr, with_diff=False), "unit": _unit_row(cr.unit)}
@@ -204,7 +208,7 @@ def file_dispute(body: DisputeBody, actor: Actor = Depends(current_actor), db: S
 # ------------------------------------------------------------------ public verify
 
 @router.get("/verify/{ulpin}")
-def verify(ulpin: str, db: Session = Depends(get_db)):
+def verify(ulpin: str, actor: Actor = Depends(current_actor), db: Session = Depends(get_db)):
     try:
         parse_ulpin(ulpin)
     except UlpinError as e:
@@ -223,8 +227,11 @@ def verify(ulpin: str, db: Session = Depends(get_db)):
         "unit": _unit_row(u),
         "parcel": {"id": u.floor.building.parcel_id, "name": u.floor.building.parcel.name, "ulpin_2d": u.floor.building.parcel.ulpin_2d,
                    "builder": u.floor.building.parcel.builder},
-        "owner": {"name": u.ownerships[0].owner_name, "registered_on": u.ownerships[0].registered_date.isoformat(),
-                  "registration_no": u.ownerships[0].registration_no} if u.ownerships else None,
+        "owner": ({"name": u.ownerships[0].owner_name, "registered_on": u.ownerships[0].registered_date.isoformat(),
+                   "registration_no": u.ownerships[0].registration_no}
+                  if u.ownerships and (actor.role == "admin" or (actor.role in ("owner", "investor") and u.ownerships[0].owner_email == actor.user.lower()))
+                  else ({"name": "Registered owner on record (private)", "registered_on": u.ownerships[0].registered_date.isoformat(), "registration_no": "—"} if u.ownerships else None)),
+        "tpid": u.tpid,
         "versions": versions,
         "baseline": versions[0] if versions else None,
         "current": versions[-1] if versions else None,

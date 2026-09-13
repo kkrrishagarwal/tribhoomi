@@ -24,7 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="mx-auto flex max-w-screen-2xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-2.5">
             <Link href="/" className="flex items-center gap-2">
               <span className="grid h-8 w-8 place-items-center rounded-md bg-saffron-500 font-bold text-white glow-warn">3D</span>
-              <span className="font-semibold tracking-tight">त्रिभूमि Tribhoomi <span className="font-mono text-xs font-normal uppercase tracking-[0.2em] text-accent">· 3D ULPIN</span></span>
+              <span className="font-semibold tracking-tight">त्रिभूमि Tribhoomi <span className="hidden font-normal text-slate-400 sm:inline">· property identity &amp; integrity</span></span>
             </Link>
             <div className="ml-auto flex flex-wrap items-center gap-4">
               <NavLinks />
@@ -35,7 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </header>
         <main className="flex-1">{children}</main>
         <footer className="border-t border-slate-200 bg-white px-4 py-2 text-center text-xs text-slate-500">
-          <T k="h.footer" />
+          <T k="h.footer" /> · <span className="demo-badge">Demonstration dataset</span>
         </footer>
       </body>
     </html>

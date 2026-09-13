@@ -18,7 +18,7 @@ import csv
 from app.config import SEED_FILE
 from app.db import Base, SessionLocal, engine
 from app.models import Floor, MarketContextProject, Parcel, Unit
-from app.services import integrity
+from app.services import audit, integrity
 from app.services.layout import create_layout
 from app.ulpin import ParcelKey
 
@@ -70,6 +70,12 @@ def seed_parcel(db, feature: dict, rng: random.Random) -> Parcel:
         building=props["building"], underground_layers=props.get("underground_layers"), air_rights=props.get("air_rights"),
     )
     bld = parcel.buildings[0]
+    parcel.city = props.get("city") or props["district"].replace("New Delhi", "Delhi").replace("South West Delhi", "Delhi").replace("South Delhi", "Delhi").replace("Gautam Buddh Nagar", "Noida" if "Noida –" in props["village_ward"] and "Greater" not in props["village_ward"] else "Greater Noida")
+    parcel.address = f"{props['village_ward']}, {props['district']}"
+    audit.record(db, actor=parcel.builder, role="builder", action="project.created", parcel_id=parcel.id, subject=parcel.name,
+                 new=f"{parcel.city} · {parcel.land_use}", status="registered", when=datetime(2011, 6, 1))
+    audit.record(db, actor=parcel.builder, role="builder", action="building.created", parcel_id=parcel.id, subject=f"{parcel.name} · {bld.name}",
+                 new=f"{bld.num_floors} floors", when=datetime(2011, 6, 2))
     unsold_top_floors = props.get("unsold_top_floors", 2)
     for floor in bld.floors:
         for unit in floor.units:
@@ -78,10 +84,39 @@ def seed_parcel(db, feature: dict, rng: random.Random) -> Parcel:
                 continue
             name, otype = pick_owner(unit.usage_type, rng)
             when = datetime(2012, 1, 1) + timedelta(days=rng.randint(0, 365 * 13))
+            # every sold unit in the demo went through the lifecycle: created -> submitted -> verified by the authority
+            audit.record(db, actor=parcel.builder, role="builder", action="unit.created", unit=unit, new=f"{unit.label} · {unit.area_sqm} m²", status="draft", when=when - timedelta(days=40))
+            audit.record(db, actor=parcel.builder, role="builder", action="unit.submitted", unit=unit, previous="draft", new="pending", status="pending", when=when - timedelta(days=30))
+            unit.verification_status, unit.verified_by, unit.verified_at = "verified", "Authority Demo User", when - timedelta(days=10)
+            unit.verification_id = f"TRB-VER-{unit.verified_at.strftime('%Y%m%d')}-{unit.id:04X}"
+            audit.record(db, actor="Authority Demo User", role="admin", action="unit.verified", unit=unit, previous="pending", new="verified", status="verified", note=unit.verification_id, when=when - timedelta(days=10))
+            unit.sale_status = "sold"
             integrity.assign_unit(db, unit, name, email_for(name), otype, builder=parcel.builder, when=when)
             if otype == "joint":
                 unit.ownerships[0].share_percent = 50.0
     return parcel
+
+
+def seed_lifecycle_states(db) -> None:
+    """A few unsold units are mid-lifecycle so every dashboard has something to show."""
+    pending = [("Floor 10-A", "Tribhoomi Tower"), ("Floor 10-B", "Tribhoomi Tower"), ("Floor 6-A", "Aravalli Residency"),
+               ("Floor 13-C", "Gaur Heights, Sector 16C"), ("Floor 13-A", "Millennium Trade Tower, Cyber City")]
+    for i, (label, bname) in enumerate(pending):
+        try:
+            u = find_unit(db, label, bname)
+        except Exception:
+            continue
+        when = datetime(2026, 9, 1 + i, 10, 0)
+        u.verification_status, u.submitted_at = "pending", when
+        audit.record(db, actor=u.floor.building.parcel.builder, role="builder", action="unit.created", unit=u, new=f"{u.label} · {u.area_sqm} m²", status="draft", when=when - timedelta(days=2))
+        audit.record(db, actor=u.floor.building.parcel.builder, role="builder", action="unit.submitted", unit=u, previous="draft", new="pending", status="pending", when=when)
+        integrity.notify(db, "admin", f"{u.floor.building.parcel.builder} submitted {u.label} ({u.tpid}) for verification.", u.unit_ulpin)
+    # the tampered flat and the overlapping pair are flagged as conflicts for the authority
+    for label, bname in [("Floor 7-C", "Tribhoomi Tower"), ("Floor 3-D", "Aravalli Residency")]:
+        try:
+            u = find_unit(db, label, bname); u.verification_status = "conflict"
+        except Exception:
+            pass
 
 
 def find_unit(db, label: str, building_name: str) -> Unit:
@@ -163,6 +198,7 @@ def run(reset: bool = True) -> None:
             p = seed_parcel(db, feature, rng)
             print(f"seeded parcel {p.ulpin_2d}  {p.name}")
         seed_integrity_scenarios(db)
+        seed_lifecycle_states(db)
         n = seed_market_context(db)
         db.commit()
         print("units:", db.query(Unit).count(), "floors:", db.query(Floor).count(), "market-context projects:", n)

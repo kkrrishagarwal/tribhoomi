@@ -2,13 +2,13 @@
 /** QR code that opens the unit's public Verify My Plot page — scan it with any phone. */
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
-import { verifyUrl } from "@/lib/publicUrl";
+import { publicOrigin, verifyUrl } from "@/lib/publicUrl";
 
-export default function UlpinQR({ ulpin, size = 112, caption = true }: { ulpin: string; size?: number; caption?: boolean }) {
+export default function UlpinQR({ ulpin, size = 112, caption = true, passport = false }: { ulpin: string; size?: number; caption?: boolean; passport?: boolean }) {
   const [src, setSrc] = useState<string | null>(null);
   const [url, setUrl] = useState("");
   useEffect(() => {
-    const u = verifyUrl(ulpin);
+    const u = passport ? `${publicOrigin()}/passport/${encodeURIComponent(ulpin)}` : verifyUrl(ulpin);
     setUrl(u);
     QRCode.toDataURL(u, { margin: 1, width: size * 2, color: { dark: "#0a0e14", light: "#ffffff" } }).then(setSrc).catch(() => setSrc(null));
   }, [ulpin, size]);

@@ -23,6 +23,7 @@ from sqlalchemy.orm import Session
 
 from ..geo import local_to_lnglat
 from ..models import ChangeRequest, Dispute, Notification, Ownership, Parcel, PlotVersion, Unit
+from . import audit
 
 
 class IntegrityError(Exception):
@@ -105,15 +106,19 @@ def assign_unit(db: Session, u: Unit, owner_name: str, owner_email: str, ownersh
     db.add(o)
     u.ownerships.append(o)
     db.flush()
-    append_version(db, u, changed_by=builder, reason="Registered baseline at sale", approval_status="baseline", when=when)
+    if not u.versions:
+        append_version(db, u, changed_by=builder, reason="Registered baseline at sale", approval_status="baseline", when=when)
+    audit.record(db, actor=builder, role="builder", action="unit.assigned", unit=u, new=f"{owner_name} ({o.owner_email})", status="registered", when=when)
     notify(db, o.owner_email, f"{u.label} ({u.unit_ulpin}) has been registered in your name. Baseline v1 locked.", u.unit_ulpin)
     return o
 
 
 def direct_edit(db: Session, u: Unit, builder: str, plot_number: str | None, volume: dict | None) -> Unit:
-    """Allowed only while the unit is unsold."""
+    """Allowed only while the unit is unsold AND not yet verified."""
     if u.is_locked:
         raise IntegrityError(423, f"{u.unit_ulpin} is locked: it has a registered owner. Submit a change request instead.")
+    if u.verification_status in ("verified", "pending"):
+        raise IntegrityError(423, f"{u.label} is {u.verification_status}; verified geometry is never overwritten directly. Request a modification instead.")
     if plot_number:
         u.label = plot_number
     if volume:
@@ -124,26 +129,30 @@ def direct_edit(db: Session, u: Unit, builder: str, plot_number: str | None, vol
 
 def create_change_request(db: Session, u: Unit, builder: str, proposed_volume: dict,
                           proposed_plot_number: str, reason: str, when: datetime | None = None) -> ChangeRequest:
-    if not u.is_locked:
-        raise IntegrityError(400, f"{u.unit_ulpin} is unsold; the builder can edit it directly.")
+    if not u.is_locked and u.verification_status not in ("verified", "pending"):
+        raise IntegrityError(400, f"{u.label} is an unsold draft; the builder can edit it directly.")
     if not reason.strip():
         raise IntegrityError(400, "A reason is required for every change request.")
     if any(cr.status == "pending" for cr in u.change_requests):
         raise IntegrityError(409, "There is already a pending change request for this unit.")
-    owner = u.ownerships[0]
+    owner = u.ownerships[0] if u.ownerships else None
     parcel = u.floor.building.parcel
     cr = ChangeRequest(
         unit_id=u.id, requested_by=builder,
         proposed_geometry=json.dumps(volume_to_footprint(proposed_volume, parcel)),
         proposed_bounding_volume=json.dumps(proposed_volume),
         proposed_plot_number=proposed_plot_number or u.label,
-        reason=reason, status="pending", affected_owner_id=owner.id, created_at=when or datetime.utcnow(),
+        reason=reason, status="pending", affected_owner_id=owner.id if owner else None, created_at=when or datetime.utcnow(),
     )
     db.add(cr)
     db.flush()
-    notify(db, owner.owner_email,
-           f"{builder} requests a change to {u.label} ({u.unit_ulpin}): {reason}. Please approve or reject.",
-           u.unit_ulpin, cr.id)
+    audit.record(db, actor=builder, role="builder", action="modification.requested", unit=u, previous=f"{u.label} · {u.area_sqm} m²",
+                 new=f"{proposed_plot_number or u.label} · proposed boundary", status="pending", note=reason, when=when)
+    if owner:
+        notify(db, owner.owner_email,
+               f"{builder} requests a change to {u.label} ({u.unit_ulpin}): {reason}. Please approve or reject.",
+               u.unit_ulpin, cr.id)
+    notify(db, "admin", f"Modification request #{cr.id} on {u.label} ({u.unit_ulpin}) by {builder}.", u.unit_ulpin, cr.id)
     return cr
 
 
@@ -160,13 +169,18 @@ def decide_change_request(db: Session, cr: ChangeRequest, decision: str, actor_e
     cr.resolution_note = note
     if decision == "approve":
         cr.status = "approved"
+        prev = f"{u.label} · {u.area_sqm} m²"
         u.label = cr.proposed_plot_number
         apply_volume(u, json.loads(cr.proposed_bounding_volume))
         append_version(db, u, changed_by=cr.requested_by, reason=cr.reason, approval_status="approved", change_request_id=cr.id)
-        notify(db, cr.requested_by, f"Change request #{cr.id} on {u.unit_ulpin} was APPROVED by the owner. New version recorded.", u.unit_ulpin, cr.id)
+        audit.record(db, actor=actor_email or "authority", role="owner" if owner and owner.owner_email == actor_email.lower().strip() else "admin",
+                     action="modification.approved", unit=u, previous=prev, new=f"{u.label} · {u.area_sqm} m²", status="approved", note=note)
+        notify(db, cr.requested_by, f"Change request #{cr.id} on {u.unit_ulpin} was APPROVED. New version recorded.", u.unit_ulpin, cr.id)
     elif decision == "reject":
         cr.status = "rejected"
-        notify(db, cr.requested_by, f"Change request #{cr.id} on {u.unit_ulpin} was REJECTED by the owner. {note}".strip(), u.unit_ulpin, cr.id)
+        audit.record(db, actor=actor_email or "authority", role="owner" if owner and owner.owner_email == actor_email.lower().strip() else "admin",
+                     action="modification.rejected", unit=u, status="rejected", note=note)
+        notify(db, cr.requested_by, f"Change request #{cr.id} on {u.unit_ulpin} was REJECTED. {note}".strip(), u.unit_ulpin, cr.id)
     else:
         raise IntegrityError(400, "decision must be 'approve' or 'reject'")
     db.flush()
@@ -183,6 +197,7 @@ def raise_dispute(db: Session, u: Unit, raised_by: str, description: str,
                 created_at=when or datetime.utcnow())
     db.add(d)
     db.flush()
+    audit.record(db, actor=raised_by, role="owner", action="dispute.raised", unit=u, status="open", note=description, when=when)
     notify(db, "admin", f"New dispute #{d.id} on {u.unit_ulpin} raised by {raised_by}.", u.unit_ulpin, change_request_id)
     return d
 

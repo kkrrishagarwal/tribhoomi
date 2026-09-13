@@ -2,47 +2,38 @@ import Link from "next/link";
 import T from "@/components/T";
 
 const STEPS = [
-  { n: 1, title: "Find the surface parcel", href: "/", cta: "Open parcel map",
-    what: "Search “09141003100045” or “Tribhoomi Tower”, or click a parcel on the map. The 14-digit 2D ULPIN is shown, colour-coded by segment. Builders can draw or upload a new plot here. The optional Globe page shows the same parcels on Cesium world terrain with the real neighbouring buildings (needs a WebGL-capable GPU).",
-    say: "Today every parcel already has a flat 2D ULPIN. It says nothing about what is above or below the ground." },
-  { n: 2, title: "Expand vertically", href: "/parcel/1", cta: "Open Tribhoomi Tower in 3D",
-    what: "Click “Expand vertically”. The footprint is extruded into 12 floors plus a basement. Every floor and unit carries its own 3D ULPIN that starts with the same 14 digits.",
-    say: "The engine appends Building-Level-Unit-Layer segments. Zero means ‘whole’, so IDs nest like folders. Drag the Explode slider to see inside." },
-  { n: 3, title: "Open an ownership record", href: "/parcel/1", cta: "Click any unit",
-    what: "Click a blue unit. The side panel shows owner, tenure type, registration, area, bounding volume, and the parent chain back to the 2D ULPIN.",
-    say: "This is the vertical property register: one title per cubic volume, not per land patch." },
-  { n: 4, title: "Run the topology validator", href: "/parcel/1", cta: "Run validator on Tribhoomi Tower",
-    what: "Press “Run topology validator”. Units 7-B and 7-C turn red: their surveyed volumes intersect by 2.5 m. Click the conflict to jump to it.",
-    say: "Overlaps are found by 3D bounding-volume intersection. Then open Aravalli Residency (parcel 2): basement 2 clashes with the DMRC underground utility corridor — a cross-layer conflict." },
-  { n: 5, title: "Check the metro clash", href: "/parcel/2", cta: "Open Aravalli Residency",
-    what: "Run the validator here too. The purple tunnel volume and basement-2 parking overlap below −5 m.",
-    say: "Underground layers get their own ULPINs under B00 (parcel level) with layer letter G, so utilities and metro corridors are first-class records." },
-  { n: 6, title: "Builder registers a sale → baseline locks", href: "/builder", cta: "Open the builder desk (switch role to Builder · Tribhoomi Developers)",
-    what: "Pick an unsold unit, click “Assign to investor”, enter a name and email. The unit moves to the Locked list with version 1 recorded. Try “Edit” on a locked unit: it is refused; only “Request change” is offered, with a before/after map.",
-    say: "This is the anti-fraud rule: registration snapshots the plot number, boundary and ULPIN. After that, the builder cannot silently edit anything." },
-  { n: 7, title: "Investor approves or rejects", href: "/investor", cta: "Open My plots (switch role to Investor · Rajesh Kumar)",
-    what: "Rajesh has a pending request on Floor 5-A with the proposed boundary drawn over the registered one. Approve it → version 2 is created; reject it → nothing changes.",
-    say: "Only the affected owner can approve. A new version exists only when they do." },
-  { n: 8, title: "Catch a silent change", href: "/verify?ulpin=09-141-0018-00046-B01-F04-U03-A", cta: "Verify Anita's flat (public page, no login)",
-    what: "The verify page shows TAMPERED: registered as Floor 3-C, now Floor 3-D with a boundary pushed 1.8 m into the neighbour, recorded without approval. v1 and v2 are overlaid on the map and a dispute is open. The topology validator also flags the overlap.",
-    say: "Because history is append-only, the builder's change is visible forever — and anyone can check it by ULPIN." },
-  { n: 9, title: "Government audit", href: "/admin", cta: "Open the audit view (switch role to Government)",
-    what: "All open disputes and pending requests with before/after diffs. Start an investigation or resolve.",
-    say: "An official sees exactly what changed, against which version, without touching raw tables." },
-  { n: 10, title: "AI footprint extraction", href: "/ai", cta: "Run the model",
-    what: "Run the pretrained SegFormer model on the Noida Sector 18 aerial image. Buildings are masked in red and vectorised to yellow footprint polygons with areas in m².",
-    say: "This is how new surface parcels would be captured automatically before extrusion with LiDAR/drone height data." },
-  { n: 11, title: "Dashboard", href: "/dashboard", cta: "Open dashboard",
-    what: "Totals for parcels, buildings, floors, units, ULPINs generated, and conflicts flagged, plus breakdowns by usage and tenure.",
-    say: "Everything on this page is computed live from the database." },
+  { n: 1, title: "Find a property", href: "/discover?q=Aravalli", cta: "Search “Aravalli”",
+    what: "Type a project name. Every unit shows its status: Verified, Pending, or Conflict.",
+    say: "Tribhoomi gives each flat its own identity, not just the land parcel." },
+  { n: 2, title: "See its building / floor / unit identity", href: "/property/TRB-AR46-F03-U01", cta: "Open Aravalli Residency Floor 3-A",
+    what: "The property page shows the Tribhoomi Property ID (TPID), integrity score, passport and history.",
+    say: "The TPID links project → building → floor → unit. The official land-record ID sits under Advanced details." },
+  { n: 3, title: "Verify the property", href: "/property/TRB-AR46-F03-U01", cta: "Click ‘Verify before you invest’",
+    what: "Seven checks run: identity, authority verification, existence, overlap, unapproved changes, disputes, pending modifications.",
+    say: "An investor gets a plain answer: consistent, review recommended, or conflict." },
+  { n: 4, title: "Simulate a boundary change", href: "/signin/builder", cta: "Sign in as Tribhoomi Developers → Units → any verified unit → Request modification",
+    what: "Drag the orange box in the floor editor. Area and validation update live. Submit the modification.",
+    say: "Builders never type coordinates and never overwrite verified geometry; the original stays as version 1." },
+  { n: 5, title: "Tribhoomi detects a conflict", href: "/property/TRB-AR46-F03-U03", cta: "Open Aravalli Floor 3-D",
+    what: "This flat was silently changed from 3-C to 3-D and moved 1.8 m. The page shows a red banner, an unapproved version, and an overlap with the neighbour.",
+    say: "Because history is append-only, a silent change cannot hide." },
+  { n: 6, title: "Compare before and after", href: "/property/TRB-AR46-F03-U03", cta: "Expand ‘View before & after’",
+    what: "Registered boundary (grey dashed) versus current record (orange), on the map and on the floor plan, with the area and movement difference.",
+    say: "This is the evidence an official or a court needs." },
+  { n: 7, title: "Authority reviews", href: "/signin/authority", cta: "Sign in as Authority → Pending verification → Review",
+    what: "Open a pending unit: geometry with neighbours, validation score, versions, audit history. Approve, request changes or reject. Every decision is logged.",
+    say: "A builder cannot verify their own unit. Only the authority issues a verification ID." },
+  { n: 8, title: "Generate the Property Integrity Report", href: "/property/TRB-AR46-F03-U01", cta: "Click ‘Generate integrity report’",
+    what: "A PDF with the TPID, verification status, integrity score breakdown, before/after diagram, history and a QR to the public passport.",
+    say: "Everything is labelled as a demonstration dataset. Nothing here pretends to be a government certificate." },
 ];
 
 export default function DemoPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-4 p-4">
       <div>
-        <h1 className="text-xl font-semibold"><T k="h.demo" /></h1>
-        <p className="text-sm text-slate-600">Eleven steps, about six minutes. Each card says what to click and what to say. Use the role dropdown in the header to switch between builder, investor and government.</p>
+        <h1 className="h1">Guided demo · the property lifecycle</h1>
+        <p className="text-sm text-slate-600">Eight steps, about 90 seconds of clicking. Each card says what to click and what to say. Roles are simulated: use the sign-in pages or the header dropdown.</p>
       </div>
       <ol className="space-y-3">
         {STEPS.map((s) => (
