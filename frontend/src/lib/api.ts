@@ -327,7 +327,7 @@ export const api = {
   flagship: (stage: "setup" | "full" = "setup") => send<{ project_id: number; building_id: number; units: Record<string, string>; change_request_id: number; stage: string }>("POST", `/api/demo/flagship?stage=${stage}`),
   authorityDecideV2: (ident: string, decision: "approve" | "reject" | "changes", note = "", category = "") => send<{ ok: boolean; message: string; unit: PropertyUnit }>("POST", `/api/authority/units/${encodeURIComponent(ident)}/decide`, { decision, note, category }),
   decideV2: (id: number, decision: "approve" | "reject" | "changes", note = "", category = "") => send<{ ok: boolean; change_request: ChangeRequest; unit: UnitRow }>("POST", `/api/change-requests/${id}/decide`, { decision, note, category }),
-  aiStatus: () => get<{ model_id: string; loaded: boolean; error: string | null }>("/api/ai/status"),
+  aiStatus: () => get<{ model_id: string; loaded: boolean; error: string | null; mode?: string; explanation?: string }>("/api/ai/status"),
   extract: async (file?: File) => {
     const fd = new FormData();
     if (file) fd.append("file", file);

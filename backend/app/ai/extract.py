@@ -12,8 +12,11 @@ from __future__ import annotations
 
 import base64
 import io
+import json
+import os
 import threading
 import time
+import urllib.request
 
 import numpy as np
 from PIL import Image
@@ -32,9 +35,38 @@ _load_error: str | None = None
 SAMPLE_M_PER_PX = 0.524
 
 
+HF_TOKEN = os.getenv("HF_TOKEN", "")
+BUILDING_LABELS = ("building", "house", "skyscraper")
+
+
+def _local_available() -> bool:
+    try:
+        import torch  # noqa: F401
+        import transformers  # noqa: F401
+        return True
+    except Exception:
+        return False
+
+
+def mode() -> str:
+    """local = torch installed here; remote = Hugging Face Inference API via HF_TOKEN; off = neither."""
+    if _local_available():
+        return "local"
+    if HF_TOKEN:
+        return "remote"
+    return "off"
+
+
 def status() -> dict:
-    return {"model_id": AI_MODEL_ID, "loaded": _model is not None, "error": _load_error,
-            "building_classes": _building_ids}
+    m = mode()
+    explain = {
+        "local": "Model runs on this server (PyTorch installed).",
+        "remote": "This server has no PyTorch; inference is sent to the Hugging Face Inference API with your token.",
+        "off": "This server has no PyTorch and no HF_TOKEN, so the AI demo is disabled here. It runs locally with ./dev.sh, "
+               "or set HF_TOKEN on the host to use remote inference.",
+    }[m]
+    return {"model_id": AI_MODEL_ID, "mode": m, "loaded": _model is not None, "error": _load_error,
+            "building_classes": _building_ids, "explanation": explain}
 
 
 def _load():
@@ -61,13 +93,45 @@ def sample_image_path():
     return SAMPLE_DIR / "aerial.jpg"
 
 
+def remote_mask(image: Image.Image) -> tuple[np.ndarray, int]:
+    """
+    Hugging Face Inference API: image-segmentation returns one PNG mask per label.
+    We union the building-like labels. Needs HF_TOKEN; the model may need ~20 s to warm up.
+    """
+    buf = io.BytesIO(); image.convert("RGB").save(buf, format="JPEG", quality=92)
+    req = urllib.request.Request(f"https://api-inference.huggingface.co/models/{AI_MODEL_ID}", data=buf.getvalue(),
+                                 headers={"Authorization": f"Bearer {HF_TOKEN}", "Content-Type": "image/jpeg", "x-wait-for-model": "true"})
+    t0 = time.perf_counter()
+    with urllib.request.urlopen(req, timeout=120) as r:
+        payload = json.loads(r.read().decode())
+    if isinstance(payload, dict) and "error" in payload:
+        raise RuntimeError(f"Hugging Face API: {payload['error']}")
+    return masks_to_building_mask(payload, image.size), round((time.perf_counter() - t0) * 1000)
+
+
+def masks_to_building_mask(segments: list, size: tuple[int, int]) -> np.ndarray:
+    """Union the base64 PNG masks whose label looks like a building. Pure; unit-tested."""
+    w, h = size
+    out = np.zeros((h, w), dtype=bool)
+    for seg in segments:
+        label = str(seg.get("label", "")).lower()
+        if not any(b in label for b in BUILDING_LABELS):
+            continue
+        m = Image.open(io.BytesIO(base64.b64decode(seg["mask"]))).convert("L").resize((w, h))
+        out |= np.array(m) > 127
+    return out
+
+
 def run_extraction(image: Image.Image, m_per_px: float = SAMPLE_M_PER_PX) -> dict:
+    image = image.convert("RGB")
+    if mode() == "remote":
+        mask, infer_ms = remote_mask(image)
+        return _package(image, mask, infer_ms, m_per_px, source="Hugging Face Inference API (remote)")
     _load()
     if _model is None:
-        raise RuntimeError(_load_error or "model not loaded")
+        raise RuntimeError(_load_error or status()["explanation"])
     import torch
 
-    image = image.convert("RGB")
     t0 = time.perf_counter()
     inputs = _processor(images=image, return_tensors="pt")
     with torch.no_grad():
@@ -75,8 +139,11 @@ def run_extraction(image: Image.Image, m_per_px: float = SAMPLE_M_PER_PX) -> dic
     up = torch.nn.functional.interpolate(logits, size=image.size[::-1], mode="bilinear", align_corners=False)
     pred = up.argmax(dim=1)[0].cpu().numpy()
     infer_ms = round((time.perf_counter() - t0) * 1000)
-
     mask = np.isin(pred, _building_ids)
+    return _package(image, mask, infer_ms, m_per_px, source="local PyTorch")
+
+
+def _package(image: Image.Image, mask: np.ndarray, infer_ms: int, m_per_px: float, source: str) -> dict:
     coverage = float(mask.mean())
 
     polygons = vectorise(mask, cell=8)
@@ -93,6 +160,7 @@ def run_extraction(image: Image.Image, m_per_px: float = SAMPLE_M_PER_PX) -> dic
 
     return {
         "model_id": AI_MODEL_ID,
+        "source": source,
         "inference_ms": infer_ms,
         "image_size": list(image.size),
         "building_pixel_share": round(coverage, 4),

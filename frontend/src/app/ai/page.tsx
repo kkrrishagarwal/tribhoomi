@@ -6,7 +6,7 @@ import ScanLoader from "@/components/ScanLoader";
 
 export default function AiPage() {
   const { t } = useT();
-  const [status, setStatus] = useState<{ model_id: string; loaded: boolean; error: string | null } | null>(null);
+  const [status, setStatus] = useState<{ model_id: string; loaded: boolean; error: string | null; mode?: string; explanation?: string } | null>(null);
   const [result, setResult] = useState<ExtractResult | null>(null);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -68,15 +68,17 @@ export default function AiPage() {
         <div className="card space-y-3 p-4 text-sm">
           <div>
             <div className="label">Model status</div>
-            <div className={`mt-1 text-xs ${status?.loaded ? "text-emerald-700" : "text-slate-500"}`}>
-              {status?.error ? `Error: ${status.error}` : status?.loaded ? "Loaded in memory" : "Will load on first run (a few seconds)"}
+            <div className={`mt-1 text-xs ${status?.mode === "off" ? "text-amber-700" : status?.loaded ? "text-emerald-700" : "text-slate-500"}`}>
+              {status?.error ? `Error: ${status.error}` : status?.mode === "off" ? "Disabled on this server" : status?.mode === "remote" ? "Remote inference (Hugging Face API)" : status?.loaded ? "Loaded in memory" : "Will load on first run (a few seconds)"}
             </div>
+            {status?.explanation && <div className="mt-1 text-xs text-slate-500">{status.explanation}</div>}
+            {status?.mode === "off" && <div className="mt-2 rounded-lg border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900">This is expected on the free hosting tier (512 MB RAM). The same model runs locally in about 3 seconds, or remotely by adding an <span className="font-mono">HF_TOKEN</span> environment variable on the host.</div>}
           </div>
           <label className="block text-xs">
             <span className="label">Optional: your own aerial image</span>
             <input type="file" accept="image/*" onChange={(e) => { setFile(e.target.files?.[0] ?? null); setResult(null); setView("original"); }} className="mt-1 block w-full text-xs" />
           </label>
-          <button onClick={run} disabled={running} className="btn-accent w-full justify-center">
+          <button onClick={run} disabled={running || status?.mode === "off"} className="btn-accent w-full justify-center">
             {running ? "Running segmentation…" : "Run footprint extraction"}
           </button>
           {running && <ScanLoader text="SegFormer · segmenting" className="p-1" />}
@@ -84,7 +86,7 @@ export default function AiPage() {
           {result && (
             <>
               <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
-                <dt className="text-slate-500">Inference time</dt><dd>{result.inference_ms} ms (CPU)</dd>
+                <dt className="text-slate-500">Inference time</dt><dd>{result.inference_ms} ms{(result as any).source ? ` · ${(result as any).source}` : ""}</dd>
                 <dt className="text-slate-500">Building pixels</dt><dd>{(result.building_pixel_share * 100).toFixed(1)} %</dd>
                 <dt className="text-slate-500">Footprints found</dt><dd>{result.footprints_found}</dd>
               </dl>

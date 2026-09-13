@@ -26,5 +26,5 @@ async def run_extract(file: UploadFile | None = File(default=None)):
         image = Image.open(extract.sample_image_path())
     try:
         return extract.run_extraction(image)
-    except RuntimeError as e:
-        raise HTTPException(503, f"AI model unavailable: {e}")
+    except Exception as e:  # keep the demo page readable: say what happened and what to do
+        raise HTTPException(503, f"AI footprint extraction is not available on this server. {extract.status()['explanation']} ({type(e).__name__}: {str(e)[:120]})")
