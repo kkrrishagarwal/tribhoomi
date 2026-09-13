@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { api, type ProjectDashboard } from "@/lib/api";
+import { api, type Health, type ProjectDashboard } from "@/lib/api";
 import Gate from "@/components/Gate";
 import ScanLoader from "@/components/ScanLoader";
 import { DemoBadge } from "@/components/StatusPill";
@@ -13,9 +13,9 @@ function Inner() {
   const { id } = useParams<{ id: string }>();
   const [p, setP] = useState<ProjectDashboard | null>(null);
   const [err, setErr] = useState<string | null>(null); const [msg, setMsg] = useState<string | null>(null);
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useState(false); const [h, setH] = useState<Health | null>(null);
   const [b, setB] = useState({ name: "Tower A", num_floors: 12, building_type: "residential", num_basements: 0, parking_levels: 0, commercial_ground_floor: false, amenities: "", auto_units_per_floor: 0 });
-  const load = () => api.project(id).then(setP).catch((e) => setErr(e.message));
+  const load = () => { api.project(id).then(setP).catch((e) => setErr(e.message)); api.projectHealth(id).then(setH).catch(() => null); };
   useEffect(() => { load(); /* eslint-disable-line react-hooks/exhaustive-deps */ }, [id]);
   async function addBuilding() {
     setMsg(null);
@@ -36,6 +36,13 @@ function Inner() {
           <div key={l as string} className="card stat"><div className="label">{l}</div><div className={`n ${t}`}>{v}</div></div>
         ))}
       </div>
+      {h && (
+        <div className="card mt-4 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2"><div className="font-semibold">Project health</div><div className="text-sm text-slate-500">Submission readiness <span className="font-mono text-lg text-accent">{h.readiness_percent}%</span></div></div>
+          <div className="mt-2 grid grid-cols-3 gap-2 text-center text-sm sm:grid-cols-6">{[["Units", h.units], ["Verified", h.verified], ["Pending", h.pending], ["Needs changes", h.needs_changes], ["Conflicts", h.conflicts], ["Disputes", h.disputes]].map(([l, v]) => <div key={l as string} className="rounded-lg bg-slate-50 py-2"><div className="font-mono text-lg">{v}</div><div className="text-xs text-slate-500">{l}</div></div>)}</div>
+          <div className="mt-1 text-xs text-slate-500">{h.method}</div>
+        </div>
+      )}
       {msg && <div className={`mt-4 rounded-lg p-3 text-sm ${msg.startsWith("Error") ? "border border-red-300 bg-red-50 text-red-800" : "bg-emerald-50 text-emerald-800"}`}>{msg}</div>}
       <div className="mt-8 flex items-center justify-between"><h2 className="h2">Buildings</h2><button onClick={() => setAdding(!adding)} className="btn-accent">+ Add building</button></div>
       {adding && (

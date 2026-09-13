@@ -175,6 +175,7 @@ def investor_overview(actor: Actor = Depends(require_role("investor", "owner", "
 class DecideBody(BaseModel):
     decision: str
     note: str = ""
+    category: str = ""
 
 
 @router.post("/change-requests/{cr_id}/decide")
@@ -183,7 +184,7 @@ def decide(cr_id: int, body: DecideBody, actor: Actor = Depends(require_role("in
     if not cr:
         raise HTTPException(404, "change request not found")
     email = actor.user if actor.role in ("investor", "owner") else (cr.affected_owner.owner_email if cr.affected_owner else "")
-    _run(svc.decide_change_request, db, cr, body.decision, email, body.note)
+    _run(svc.decide_change_request, db, cr, body.decision, email, body.note, body.category)
     db.commit()
     return {"ok": True, "change_request": svc.change_request_dict(cr, with_diff=False), "unit": _unit_row(cr.unit)}
 

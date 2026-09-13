@@ -395,9 +395,13 @@ def authority_review(ident: str, actor: Actor = Depends(require_role("admin")), 
     }
 
 
+DECISION_CATEGORIES = ["Boundary correction", "Duplicate property", "Area mismatch", "Missing information", "Parcel conflict", "Neighbour conflict", "Documentation issue", "Other"]
+
+
 class DecisionBody(BaseModel):
     decision: str   # approve | reject | changes
     note: str = ""
+    category: str = ""
 
 
 @router.post("/authority/units/{ident}/decide")
@@ -406,20 +410,22 @@ def authority_decide(ident: str, body: DecisionBody, actor: Actor = Depends(requ
     if u.verification_status != "pending":
         raise HTTPException(409, f"This unit is {_status_label(u).lower()}, not pending. Only pending submissions can be decided.")
     prev = u.verification_status
+    if body.decision in ("reject", "changes") and not (body.category or body.note.strip()):
+        raise HTTPException(400, "Please choose a reason category or write a note so the decision is explainable in the audit trail.")
     if body.decision == "approve":
         u.verification_status, u.verified_by, u.verified_at = "verified", actor.user, datetime.utcnow()
         u.verification_id = f"TRB-VER-{u.verified_at.strftime('%Y%m%d')}-{secrets.token_hex(3).upper()}"
         if not u.versions:   # first verification locks the geometry as version 1 even before a sale
             svc.append_version(db, u, changed_by=actor.user, reason="Authority verification baseline", approval_status="baseline")
-        audit.record(db, actor=actor.user, role=actor.role, action="unit.verified", unit=u, previous=prev, new="verified", status="verified", note=body.note or u.verification_id)
+        audit.record(db, actor=actor.user, role=actor.role, action="unit.verified", unit=u, previous=prev, new="verified", status="verified", note=body.note or u.verification_id, category=body.category)
         msg = f"{u.label} verified. Verification ID {u.verification_id}."
     elif body.decision == "reject":
         u.verification_status = "rejected"
-        audit.record(db, actor=actor.user, role=actor.role, action="unit.rejected", unit=u, previous=prev, new="rejected", status="rejected", note=body.note)
+        audit.record(db, actor=actor.user, role=actor.role, action="unit.rejected", unit=u, previous=prev, new="rejected", status="rejected", note=body.note, category=body.category)
         msg = f"{u.label} rejected." + (f" Reason: {body.note}" if body.note else "")
     elif body.decision == "changes":
         u.verification_status = "draft"
-        audit.record(db, actor=actor.user, role=actor.role, action="unit.changes_requested", unit=u, previous=prev, new="draft", status="draft", note=body.note)
+        audit.record(db, actor=actor.user, role=actor.role, action="unit.changes_requested", unit=u, previous=prev, new="draft", status="draft", note=body.note, category=body.category)
         msg = f"Changes requested for {u.label}. The builder can edit and resubmit."
     else:
         raise HTTPException(400, "decision must be approve, reject or changes")

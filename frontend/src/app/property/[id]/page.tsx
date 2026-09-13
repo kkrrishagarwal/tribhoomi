@@ -3,7 +3,13 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { api, type PropertyPage, type VerifyResultV2 } from "@/lib/api";
+import { api, type Analysis, type PropertyPage, type VerifyResultV2 } from "@/lib/api";
+import TrustSummary from "@/components/analysis/TrustSummary";
+import RiskTimeline from "@/components/analysis/RiskTimeline";
+import ChangeAnalysis from "@/components/analysis/ChangeAnalysis";
+import DependencyGraph from "@/components/analysis/DependencyGraph";
+import PriorityBadge from "@/components/analysis/PriorityBadge";
+import { CompletenessPanel, InsightPanel } from "@/components/analysis/Insight";
 import { useSession } from "@/lib/useSession";
 import StatusPill, { DemoBadge } from "@/components/StatusPill";
 import ScanLoader from "@/components/ScanLoader";
@@ -21,8 +27,20 @@ export default function PropertyPageView() {
   const [err, setErr] = useState<string | null>(null); const [checking, setChecking] = useState(false);
   const [dispute, setDispute] = useState<string | null>(null); const [msg, setMsg] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [an, setAn] = useState<Analysis | null>(null); const [watching, setWatching] = useState(false);
+  const [nb, setNb] = useState<{ label: string; tpid: string; volume: { min: number[]; max: number[] } }[]>([]); const [fp, setFp] = useState<number[][]>([]);
   const load = () => api.property(id).then((d) => { setP(d); try { setSaved((JSON.parse(localStorage.getItem("tribhoomi.saved") || "[]") as string[]).includes(d.tpid)); } catch {} }).catch((e) => setErr(e.message));
-  useEffect(() => { load(); /* eslint-disable-line react-hooks/exhaustive-deps */ }, [id, s]);
+  useEffect(() => {
+    load();
+    api.analysis(id).then(setAn).catch(() => setAn(null));
+    api.alerts().then((a) => setWatching(a.watching.includes(id))).catch(() => null);
+    /* eslint-disable-line react-hooks/exhaustive-deps */
+  }, [id, s]);
+  useEffect(() => {
+    if (!p) return;
+    api.building(p.building.id).then((b) => { setFp(b.footprint_local); const fl = b.floors.find((x) => x.floor_number === p.floor_number); setNb((fl?.units ?? []).filter((u) => u.tpid !== p.tpid).map((u) => ({ label: u.label, tpid: u.tpid, volume: u.volume! }))); }).catch(() => null);
+  }, [p]);
+  async function toggleWatch() { try { const r = await api.watch(id); setWatching(r.watching); setMsg(r.watching ? "You are now watching this property. Changes appear under My property / Saved." : "Stopped watching."); } catch (e: any) { setMsg(`Error: ${e.message}`); } }
   async function verify() { setChecking(true); try { setV(await api.propertyVerify(id)); } finally { setChecking(false); } }
   function toggleSave() { try { const l = new Set(JSON.parse(localStorage.getItem("tribhoomi.saved") || "[]") as string[]); if (!p) return; l.has(p.tpid) ? l.delete(p.tpid) : l.add(p.tpid); localStorage.setItem("tribhoomi.saved", JSON.stringify([...l])); setSaved(l.has(p.tpid)); } catch {} }
   async function fileDispute() { if (!p || !dispute) return; try { const r = await api.fileDispute({ unit_ulpin: p.land_record_id, description: dispute, raised_by: s.user || "anonymous" }); setMsg(r.message); setDispute(null); load(); } catch (e: any) { setMsg(`Error: ${e.message}`); } }
@@ -38,10 +56,10 @@ export default function PropertyPageView() {
         <div className="flex flex-col items-end gap-2"><StatusPill status={p.verification_status} /><DemoBadge text="Demonstration dataset" /></div>
       </div>
 
-      {(p.flags.has_unapproved_change || p.disputes_open > 0 || p.verification_status === "conflict") && (
-        <div className="mt-4 rounded-xl border-2 border-red-400 bg-red-50 p-4 text-red-900"><div className="font-bold">⚠ This property needs attention</div><ul className="mt-1 list-disc pl-5 text-sm">
-          {p.flags.has_unapproved_change && <li>The record was changed without the owner's approval.</li>}{p.disputes_open > 0 && <li>{p.disputes_open} dispute(s) are open on this record.</li>}{p.verification_status === "conflict" && <li>Its boundary overlaps a neighbouring unit.</li>}</ul></div>
+      {an ? <div className="mt-4"><TrustSummary t={an.trust} /></div> : (p.flags.has_unapproved_change || p.disputes_open > 0 || p.verification_status === "conflict") && (
+        <div className="mt-4 rounded-xl border-2 border-red-400 bg-red-50 p-4 text-red-900"><div className="font-bold">⚠ This property needs attention</div></div>
       )}
+      {an && <div className="mt-3 flex flex-wrap items-center gap-3 text-sm"><span className="text-slate-500">Review priority:</span><PriorityBadge p={an.priority} /></div>}
 
       <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_340px]">
         <div className="space-y-4">
@@ -54,7 +72,8 @@ export default function PropertyPageView() {
             </ul>
             <div className="mt-4 flex flex-wrap gap-2">
               <button onClick={verify} disabled={checking} className="btn-accent text-base">🛡️ Verify before you invest</button>
-              <button onClick={() => downloadReport(p, v)} className="btn-ghost">Generate integrity report (PDF)</button>
+              <button onClick={() => downloadReport(p, v, an)} className="btn-ghost">Generate evidence package (PDF)</button>
+              {s.user && <button onClick={toggleWatch} className="btn-ghost">{watching ? "👁 Watching" : "Watch this property"}</button>}
               {s.role === "investor" && <button onClick={toggleSave} className="btn-ghost">{saved ? "★ Saved" : "☆ Save"}</button>}
             </div>
             {checking && <ScanLoader text="Checking identity, status, boundaries, history, disputes" />}
@@ -66,7 +85,9 @@ export default function PropertyPageView() {
             )}
           </div>
 
-          {p.change && (
+          {an && <InsightPanel text={an.insight} />}
+          {an?.change && <ChangeAnalysis c={an.change} footprint={fp} neighbours={nb} />}
+          {p.change && !an?.change && (
             <div className="card p-4">
               <div className="font-semibold">⚠ Change detected</div>
               <div className="mt-2 grid grid-cols-3 gap-3 text-center text-sm">
@@ -82,6 +103,8 @@ export default function PropertyPageView() {
             </div>
           )}
 
+          {an && <div className="card p-4"><div className="flex items-center justify-between"><div className="font-semibold">Property risk timeline</div><div className="label">when did it start needing attention?</div></div><div className="mt-3"><RiskTimeline events={an.timeline} /></div></div>}
+          {an && <DependencyGraph g={an.graph} />}
           <div className="card p-4"><div className="font-semibold">Property history</div><div className="mt-3"><HistoryTimeline items={p.history} /></div>
             {p.versions.length > 1 && <details className="mt-3"><summary className="cursor-pointer text-sm text-accent">Version history ({p.versions.length})</summary><ul className="mt-2 text-sm">{[...p.versions].reverse().map((ver) => <li key={ver.version_number} className="border-t py-1">v{ver.version_number}{ver.version_number === p.versions.length ? " (current)" : ""} · {ver.created_at.slice(0, 10)} · {ver.plot_number} · {Math.round(ver.area_sqm * 10.7639).toLocaleString()} sq ft · <span className={ver.approval_status === "unapproved" ? "text-red-300" : "text-emerald-300"}>{ver.approval_status}</span></li>)}</ul></details>}
           </div>
@@ -96,6 +119,7 @@ export default function PropertyPageView() {
             <div className="mt-3 flex items-center gap-3"><PassportQR tpid={p.tpid} /><div className="text-xs text-slate-500">Scan to open the public passport. It shows verification status only, never owner details.</div></div>
             <Link href={`/passport/${p.tpid}`} className="btn-ghost mt-3 w-full justify-center">Open public passport</Link>
           </div>
+          {an && <CompletenessPanel c={an.completeness} />}
           {p.owner && <div className="card p-4"><div className="label">Registered owner (visible to you only)</div><div className="mt-1 font-medium">{p.owner.name}</div><div className="text-sm text-slate-500">since {p.owner.registered_on}{p.owner.registration_no ? ` · ${p.owner.registration_no}` : ""}</div></div>}
           <div className="card p-4 text-sm">
             <div className="font-semibold">Actions</div>

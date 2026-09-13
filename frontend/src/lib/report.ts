@@ -2,14 +2,14 @@
 /** Tribhoomi Property Integrity Report (PDF, generated in the browser). Clearly a demo document, not a certificate. */
 import { jsPDF } from "jspdf";
 import QRCode from "qrcode";
-import type { PropertyPage, VerifyResultV2 } from "@/lib/api";
+import type { Analysis, PropertyPage, VerifyResultV2 } from "@/lib/api";
 import { publicOrigin } from "@/lib/publicUrl";
 
-export async function downloadReport(p: PropertyPage, v: VerifyResultV2 | null): Promise<void> {
+export async function downloadReport(p: PropertyPage, v: VerifyResultV2 | null, an: Analysis | null = null): Promise<void> {
   const doc = new jsPDF({ unit: "mm", format: "a4" }); const W = 210;
   const qr = await QRCode.toDataURL(`${publicOrigin()}/passport/${encodeURIComponent(p.tpid)}`, { margin: 1, width: 300 });
   doc.setFillColor(18, 22, 31); doc.rect(0, 0, W, 30, "F");
-  doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "bold"); doc.setFontSize(15); doc.text("Tribhoomi Property Integrity Report", 14, 13);
+  doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "bold"); doc.setFontSize(15); doc.text("Tribhoomi Evidence Package · Demonstration / Analytical Report", 14, 13);
   doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(200, 210, 220);
   doc.text(`Generated ${new Date().toISOString().slice(0, 16).replace("T", " ")} · DEMONSTRATION DATASET · not an official government document`, 14, 21);
   doc.addImage(qr, "PNG", W - 14 - 30, 36, 30, 30); doc.setFontSize(7); doc.setTextColor(90, 90, 90); doc.text("Scan for the public passport", W - 14 - 30, 70, { maxWidth: 30 });
@@ -42,10 +42,21 @@ export async function downloadReport(p: PropertyPage, v: VerifyResultV2 | null):
     doc.setLineDashPattern([], 0); doc.setDrawColor(234, 88, 12); doc.setFillColor(254, 215, 170); const r1 = rect(ab); doc.rect(r1[0], r1[1], r1[2], r1[3], "FD");
     doc.setFontSize(8); doc.setTextColor(90, 90, 90); doc.text("dashed = registered baseline · orange = current record", ox, oy + 44); y = oy + 50;
   }
+  if (an) {
+    y += 4; doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(20, 20, 20); doc.text(`Tribhoomi analysis · trust: ${an.trust.overall} · review priority: ${an.priority.level.toUpperCase()} (${an.priority.score}/100)`, 14, y, { maxWidth: W - 28 }); y += 6;
+    doc.setFont("helvetica", "normal"); doc.setFontSize(8.5); doc.setTextColor(60, 60, 60);
+    for (const f of an.priority.factors) { doc.text(`+${f.points}  ${f.reason}`, 16, y); y += 4.5; }
+    if (an.change) {
+      doc.text(`Change analysis (${an.change.mode.replace(/_/g, " ")}): ${an.change.area_before_sqft.toLocaleString()} → ${an.change.area_after_sqft.toLocaleString()} sq ft (${an.change.area_pct >= 0 ? "+" : ""}${an.change.area_pct}%); ${an.change.edge_moves.map((m) => m.text).join("; ") || "no edge moved"}; new conflicts: ${an.change.new_conflicts.map((c) => `${c.label} ${c.overlap_pct}%`).join(", ") || "none"}.`, 16, y, { maxWidth: W - 32 }); y += 10;
+    }
+    if (an.decisions.length) { doc.text("Authority decisions: " + an.decisions.map((d) => `${d.at.slice(0, 10)} ${d.label}${d.category ? ` [${d.category}]` : ""}${d.note ? ` — ${d.note}` : ""}`).join(" · "), 16, y, { maxWidth: W - 32 }); y += 10; }
+    doc.text("Risk timeline: " + an.timeline.map((e) => `${e.at.slice(0, 10)} ${e.event} (${e.risk})`).join(" · "), 16, y, { maxWidth: W - 32 }); y += 12;
+    doc.text(`Data completeness ${an.completeness.available}/${an.completeness.total}. Insight: ${an.insight}`, 16, y, { maxWidth: W - 32 }); y += 12;
+  }
   y = Math.max(y + 6, 200); doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(20, 20, 20); doc.text("Property history", 14, y); y += 6;
   doc.setFont("helvetica", "normal"); doc.setFontSize(8.5); doc.setTextColor(60, 60, 60);
   for (const h of p.history.slice(-12)) { if (y > 280) break; doc.text(`${h.at.slice(0, 16).replace("T", " ")}  ${h.text}`, 14, y, { maxWidth: W - 28 }); y += 5; }
   doc.setFontSize(7.5); doc.setTextColor(120, 120, 120);
   doc.text("Tribhoomi is a prototype (SIH26011). Properties, builders and owners are a demonstration dataset. The Tribhoomi Integrity Score and TPID are internal to Tribhoomi and not official government values.", 14, 289, { maxWidth: W - 28 });
-  doc.save(`tribhoomi-report-${p.tpid}.pdf`);
+  doc.save(`tribhoomi-evidence-${p.tpid}.pdf`);
 }

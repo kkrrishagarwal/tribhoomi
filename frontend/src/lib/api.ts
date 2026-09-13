@@ -222,7 +222,29 @@ export type VerifyResultV2 = { tpid: string; result: string; tone: "ok" | "warn"
 export type ProjectSummary = { id: number; name: string; developer: string; city: string; locality: string; address: string; project_type: string; land_record_id: string; is_demo: boolean; status: string; counts: Record<string, number>; centroid: { lat: number; lng: number } };
 export type ProjectDashboard = ProjectSummary & { buildings: { id: number; name: string; num_floors: number; num_basements: number; land_record_id: string; units: number; pending: number; verified: number; conflicts: number }[]; parcel_local: number[][] };
 export type BuildingDetail = { id: number; name: string; num_floors: number; num_basements: number; land_record_id: string; project: ProjectSummary; footprint_local: number[][]; parcel_local: number[][]; floors: { floor_number: number; label: string; base_elevation_m: number; height_m: number; units: PropertyUnit[] }[] };
-export type AuditRow = { id: number; at: string; actor: string; role: string; action: string; label: string; subject: string; previous_value: string; new_value: string; status: string; note: string; unit_id: number | null; parcel_id: number | null };
+export type AuditRow = { id: number; at: string; actor: string; role: string; action: string; label: string; subject: string; previous_value: string; new_value: string; status: string; note: string; category?: string; unit_id: number | null; parcel_id: number | null };
+
+// ---------------- analysis / decision support
+export type EdgeMove = { edge: string; metres: number; outward: boolean; text: string };
+export type ChangeAnalysis = {
+  kind: string; mode: "registered_vs_proposed" | "baseline_vs_current"; before: { min: number[]; max: number[] }; after: { min: number[]; max: number[] };
+  area_before_sqm: number; area_after_sqm: number; area_before_sqft: number; area_after_sqft: number; area_diff_sqm: number; area_diff_sqft: number; area_pct: number;
+  edge_moves: EdgeMove[]; centroid_shift_m: number; direction: string; changed_region_sqm: number;
+  new_conflicts: { tpid: string; label: string; overlap_sqm: number; overlap_pct: number }[]; persisting_conflicts: string[];
+  containment: Record<string, number>; leaves_building: boolean; risk: "low" | "medium" | "high"; why_it_matters: string;
+  impacted: Impacted[]; proposal_id: number | null; proposed_by: string | null; approved: boolean | null;
+};
+export type Impacted = { tpid: string; label: string; kind: "overlap" | "adjacent"; overlap_sqm: number; overlap_pct: number; distance_m: number; reason: string };
+export type RiskEvent = { at: string; event: string; version: number | null; area_change_pct: number | null; movement_m: number | null; conflict: string | null; risk: "low" | "medium" | "high" | "critical"; actor_role: string; source: string };
+export type Priority = { level: "critical" | "high" | "medium" | "low"; score: number; factors: { points: number; reason: string }[]; action: string; method: string };
+export type Completeness = { available: number; total: number; percent: number; missing: string[]; note: string };
+export type Trust = { verification: { label: string; ok: boolean; id: string | null; at: string | null }; geometry: { label: string; ok: boolean }; history: { label: string; count: number }; changes: { label: string; count: number; pending: number; unapproved_versions: boolean }; disputes: { label: string; count: number; ok: boolean }; completeness: { label: string; percent: number }; overall: string; tone: "ok" | "warn" | "bad"; note: string };
+export type Analysis = { labels: Record<string, string>; change: ChangeAnalysis | null; impacted: Impacted[]; timeline: RiskEvent[]; priority: Priority; completeness: Completeness; trust: Trust; insight: string; graph: { nodes: { id: string; type: string; label: string; href: string }[]; conflicts: { tpid: string; label: string; href: string }[] }; decision_categories: string[]; decisions: AuditRow[] };
+export type Simulation = { simulation: true; saved: false; badge: string; tpid: string; validation: Validation; change: ChangeAnalysis; impacted: Impacted[]; priority_before: Priority; priority_after: { level: string; score: number; factors: { points: number; reason: string }[] }; recommendation: string };
+export type QueueRow = PropertyUnit & { priority: Priority; pending_modification: boolean };
+export type Checklist = { tpid: string; ready: boolean; items: { key: string; text: string; ok: boolean; fix: string }[]; score: number };
+export type Health = { project: string; units: number; verified: number; pending: number; needs_changes: number; conflicts: number; disputes: number; modification_requests: number; readiness_percent: number; method: string };
+export type Alert = { at: string; tpid: string; label: string; building: string; event: string; status: string; pending_modification: boolean; area: { before_sqft: number; after_sqft: number } | null };
 
 async function get<T>(path: string): Promise<T> {
   const r = await fetch(path, { cache: "no-store", headers: sessionHeaders() });
@@ -293,6 +315,18 @@ export const api = {
   property: (ident: string) => get<PropertyPage>(`/api/property/${encodeURIComponent(ident)}`),
   propertyVerify: (ident: string) => get<VerifyResultV2>(`/api/property/${encodeURIComponent(ident)}/verify`),
   ownerProperties: () => get<{ owner: string; properties: PropertyPage[] }>("/api/owner/properties"),
+  // analysis / decision support
+  analysis: (ident: string) => get<Analysis>(`/api/property/${encodeURIComponent(ident)}/analysis`),
+  simulate: (ident: string, volume: { min: number[]; max: number[] }) => send<Simulation>("POST", `/api/authority/simulate/${encodeURIComponent(ident)}`, { volume }),
+  authorityQueue: () => get<{ queue: QueueRow[]; method: string }>("/api/authority/queue"),
+  authorityMap: () => get<{ type: "FeatureCollection"; features: { type: "Feature"; geometry: GeoPolygon; properties: { tpid: string; label: string; building: string; project: string; floor: number; status: string; priority: string | null; score: number | null } }[]; method: string }>("/api/authority/map"),
+  checklist: (ident: string) => get<Checklist>(`/api/builder/units/${encodeURIComponent(ident)}/checklist`),
+  projectHealth: (id: number | string) => get<Health>(`/api/projects/${id}/health`),
+  watch: (ident: string) => send<{ watching: boolean; tpid: string }>("POST", `/api/watch/${encodeURIComponent(ident)}`),
+  alerts: () => get<{ alerts: Alert[]; watching: string[] }>("/api/alerts"),
+  flagship: (stage: "setup" | "full" = "setup") => send<{ project_id: number; building_id: number; units: Record<string, string>; change_request_id: number; stage: string }>("POST", `/api/demo/flagship?stage=${stage}`),
+  authorityDecideV2: (ident: string, decision: "approve" | "reject" | "changes", note = "", category = "") => send<{ ok: boolean; message: string; unit: PropertyUnit }>("POST", `/api/authority/units/${encodeURIComponent(ident)}/decide`, { decision, note, category }),
+  decideV2: (id: number, decision: "approve" | "reject" | "changes", note = "", category = "") => send<{ ok: boolean; change_request: ChangeRequest; unit: UnitRow }>("POST", `/api/change-requests/${id}/decide`, { decision, note, category }),
   aiStatus: () => get<{ model_id: string; loaded: boolean; error: string | null }>("/api/ai/status"),
   extract: async (file?: File) => {
     const fd = new FormData();

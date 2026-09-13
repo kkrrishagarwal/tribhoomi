@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { api, type PropertyPage } from "@/lib/api";
+import { api, type Alert, type PropertyPage } from "@/lib/api";
 import { useSession } from "@/lib/useSession";
 import Gate from "@/components/Gate";
 import ScanLoader from "@/components/ScanLoader";
@@ -9,12 +9,16 @@ import StatusPill from "@/components/StatusPill";
 
 export default function Owner() { return <Gate roles={["owner", "admin"]} signin="/signin/owner"><Inner /></Gate>; }
 function Inner() {
-  const s = useSession(); const [rows, setRows] = useState<PropertyPage[] | null>(null);
-  useEffect(() => { api.ownerProperties().then((d) => setRows(d.properties)).catch(() => setRows([])); }, [s]);
+  const s = useSession(); const [rows, setRows] = useState<PropertyPage[] | null>(null); const [alerts, setAlerts] = useState<Alert[]>([]);
+  useEffect(() => { api.ownerProperties().then((d) => setRows(d.properties)).catch(() => setRows([])); api.alerts().then((a) => setAlerts(a.alerts)).catch(() => null); }, [s]);
   if (!rows) return <ScanLoader text="Loading your properties" className="p-16" />;
   return (
     <div className="page">
       <h1 className="h1">My property</h1><p className="lead">{s.name} · {rows.length} registered propert{rows.length === 1 ? "y" : "ies"}. Anything that changes shows up here and on the Changes page.</p>
+      {alerts.length > 0 && (
+        <div className="card mt-4 p-4"><div className="flex items-center justify-between"><div className="font-semibold">Property change alerts</div><div className="text-xs text-slate-500">Tribhoomi application notifications, not government alerts</div></div>
+          <ul className="mt-2 space-y-2">{alerts.slice(0, 6).map((a, i) => <li key={i} className="rounded-lg bg-slate-50 p-3 text-sm"><div className="flex flex-wrap items-center gap-2"><span className="font-medium">{a.building} — {a.label}</span><span className="font-mono text-xs text-slate-500">{a.at.slice(0, 16).replace("T", " ")}</span></div><div>{a.event}{a.area && <> · area {a.area.before_sqft.toLocaleString()} → {a.area.after_sqft.toLocaleString()} sq ft</>}{a.pending_modification && <span className="ml-1 text-amber-300">· pending authority review</span>}</div><Link href={`/property/${a.tpid}`} className="text-accent underline">View change</Link></li>)}</ul></div>
+      )}
       {rows.length === 0 && <div className="card mt-4 p-6 text-center text-slate-500">No property is registered to {s.user}. Pick a demo owner from the sign-in page to see data.</div>}
       <div className="mt-4 grid gap-3 md:grid-cols-2">
         {rows.map((p) => {

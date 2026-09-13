@@ -67,6 +67,33 @@ npm install && npm run dev
 The first click on **AI Footprint → Run** downloads `nvidia/segformer-b0-finetuned-ade-512-512`
 (~15 MB) from Hugging Face and caches it; later runs take a few seconds on CPU.
 
+## Decision support (what makes Tribhoomi different)
+
+All of this is computed deterministically from stored records in `backend/app/services/analysis.py`
+and served by `/api/property/<TPID>/analysis`. Every output is labelled Tribhoomi analysis, shows
+its method, and uses "potential conflict / unusual change / requires review" language.
+
+- **Geometry change intelligence**: area before/after and %, per-edge displacement ("east boundary
+  moved outward 1.5 m"), centroid shift and direction, changed region, containment change, and
+  **new** overlaps introduced by the change with the neighbours affected.
+- **What changed?** on the authority review page: registered vs proposed (or baseline vs current)
+  with before/after/overlay on the floor plan.
+- **Impacted neighbours**: overlap or proximity (< 0.5 m) with a read-only compare link.
+- **Review priority queue**: transparent point-based heuristic (overlap severity, area change,
+  disputes, unapproved versions, recent modifications, validation failures, waiting time) with
+  "Why this priority?" listing every factor. Not an official risk score.
+- **Property risk timeline**: when the property started needing attention, from versions,
+  proposals, disputes and audit events only (no invented events).
+- **Trust summary** and **data completeness** on every property page and the public passport
+  (three questions: registered? verified? current conflict?).
+- **Simulate modification** (authority): drag a boundary, see area/overlap/validation/priority
+  change; nothing is saved (`SIMULATION — NOT SAVED`).
+- **Spatial conflict map** of stored unit footprints coloured by stored status.
+- **Structured decisions**: reason category + note stored in the immutable audit trail.
+- **Watch this property** alerts (application notifications), builder **pre-submission checklist**,
+  **project health**, **evidence package** PDF, and a one-click **flagship scenario**
+  (`POST /api/demo/flagship`) that creates the boundary-modification story on a demo project.
+
 ## Pages by role
 
 | Role | Pages |

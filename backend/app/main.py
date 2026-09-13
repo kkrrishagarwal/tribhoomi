@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .config import CORS_ORIGINS, DATABASE_URL
 from .db import Base, SessionLocal, engine
 from .models import Parcel
-from .routers import ai, dashboard, integrity, layouts, lifecycle, market, parcels, ulpin, units, validate
+from .routers import ai, analysis, dashboard, integrity, layouts, lifecycle, market, parcels, ulpin, units, validate
 
 
 @asynccontextmanager
@@ -34,7 +34,7 @@ app = FastAPI(
 )
 app.add_middleware(CORSMiddleware, allow_origins=["*"] if "*" in CORS_ORIGINS else CORS_ORIGINS, allow_methods=["*"], allow_headers=["*"])
 
-for r in (parcels, units, ulpin, validate, dashboard, ai, integrity, layouts, market, lifecycle):
+for r in (parcels, units, ulpin, validate, dashboard, ai, integrity, layouts, market, lifecycle, analysis):
     app.include_router(r.router)
 
 

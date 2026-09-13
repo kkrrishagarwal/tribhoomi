@@ -302,3 +302,14 @@ class AuditEvent(Base):
     new_value: Mapped[str] = mapped_column(Text, default="")
     status: Mapped[str] = mapped_column(String(30), default="")
     note: Mapped[str] = mapped_column(Text, default="")
+    category: Mapped[str] = mapped_column(String(40), default="")   # structured decision reason (authority decisions)
+
+
+class Watch(Base):
+    """'Watch this property' — Tribhoomi application notifications, not a government alert."""
+    __tablename__ = "watches"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user: Mapped[str] = mapped_column(String(120), index=True)
+    unit_id: Mapped[int] = mapped_column(ForeignKey("units.id"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime)

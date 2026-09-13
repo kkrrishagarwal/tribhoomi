@@ -8,6 +8,8 @@ import ScanLoader from "@/components/ScanLoader";
 import StatusPill from "@/components/StatusPill";
 import BoundaryEditor, { type Box } from "@/components/BoundaryEditor";
 import ValidationPanel from "@/components/ValidationPanel";
+import Checklist from "@/components/analysis/Checklist";
+import { type Checklist as CL } from "@/lib/api";
 
 export default function Building() { return <Gate roles={["builder", "admin"]} signin="/signin/builder"><Inner /></Gate>; }
 
@@ -23,6 +25,7 @@ function Inner() {
   const [v, setV] = useState<Validation | null>(null);
   const [saved, setSaved] = useState<PropertyUnit | null>(null);
   const [msg, setMsg] = useState<string | null>(null); const [busy, setBusy] = useState(false);
+  const [ck, setCk] = useState<CL | null>(null);
   const load = () => api.building(id).then((d) => { setB(d); if (floorNo === null) setFloorNo(d.floors.find((x) => x.floor_number >= 0)?.floor_number ?? 0); }).catch((e) => setMsg(`Error: ${e.message}`));
   useEffect(() => { load(); /* eslint-disable-line react-hooks/exhaustive-deps */ }, [id]);
   const floor = useMemo(() => b?.floors.find((x) => x.floor_number === floorNo) ?? null, [b, floorNo]);
@@ -39,6 +42,7 @@ function Inner() {
     try {
       const r = await api.createUnit({ building_id: b.id, floor_number: floorNo, label: f.label, unit_type: f.unit_type, usage_type: f.usage_type, declared_area_sqft: f.declared_area_sqft ? Number(f.declared_area_sqft) : null, sale_status: f.sale_status, volume: { min: [box.min[0], box.min[1], 0], max: [box.max[0], box.max[1], 0] } });
       setSaved(r.unit); setV(r.validation); setMsg(r.message); load();
+      api.checklist(r.unit.tpid).then(setCk).catch(() => setCk(null));
     } catch (e: any) { setMsg(`Error: ${e.message}`); } finally { setBusy(false); }
   }
   async function submit(tpid: string) {
@@ -86,10 +90,11 @@ function Inner() {
                 {msg && <div className={`rounded-lg p-3 text-sm ${msg.startsWith("Error") ? "border border-red-300 bg-red-50 text-red-800" : "bg-emerald-50 text-emerald-800"}`}>{msg}</div>}
                 <div className="flex flex-wrap gap-2">
                   {!saved && <button onClick={save} disabled={busy || !box || !f.label.trim()} className="btn-primary">{busy ? "Saving…" : "Save unit (draft)"}</button>}
-                  {saved && saved.verification_status !== "pending" && <button onClick={() => submit(saved.tpid)} disabled={busy} className="btn-accent">Submit for verification</button>}
+                  {saved && saved.verification_status !== "pending" && <button onClick={() => submit(saved.tpid)} disabled={busy || (ck ? !ck.ready : false)} className="btn-accent" title={ck && !ck.ready ? "Fix the checklist items first" : ""}>Submit for verification</button>}
                   {saved && saved.verification_status === "pending" && <Link href={`/property/${saved.tpid}`} className="btn-primary">Open property page</Link>}
                   <button onClick={reset} className="btn-ghost">{saved ? "Done" : "Cancel"}</button>
                 </div>
+                {saved && ck && saved.verification_status !== "pending" && <Checklist c={ck} onFix={() => { setSaved(null); setCk(null); }} />}
                 {saved && (
                   <div className="rounded-lg border border-slate-300 p-3 text-sm">
                     <div className="label">Tribhoomi Property ID</div>

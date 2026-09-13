@@ -158,7 +158,7 @@ def create_change_request(db: Session, u: Unit, builder: str, proposed_volume: d
 
 # ---------------------------------------------------------------- investor actions
 
-def decide_change_request(db: Session, cr: ChangeRequest, decision: str, actor_email: str, note: str = "") -> ChangeRequest:
+def decide_change_request(db: Session, cr: ChangeRequest, decision: str, actor_email: str, note: str = "", category: str = "") -> ChangeRequest:
     if cr.status != "pending":
         raise IntegrityError(409, f"Change request #{cr.id} is already {cr.status}.")
     owner = cr.affected_owner
@@ -174,15 +174,20 @@ def decide_change_request(db: Session, cr: ChangeRequest, decision: str, actor_e
         apply_volume(u, json.loads(cr.proposed_bounding_volume))
         append_version(db, u, changed_by=cr.requested_by, reason=cr.reason, approval_status="approved", change_request_id=cr.id)
         audit.record(db, actor=actor_email or "authority", role="owner" if owner and owner.owner_email == actor_email.lower().strip() else "admin",
-                     action="modification.approved", unit=u, previous=prev, new=f"{u.label} · {u.area_sqm} m²", status="approved", note=note)
+                     action="modification.approved", unit=u, previous=prev, new=f"{u.label} · {u.area_sqm} m²", status="approved", note=note, category=category)
         notify(db, cr.requested_by, f"Change request #{cr.id} on {u.unit_ulpin} was APPROVED. New version recorded.", u.unit_ulpin, cr.id)
     elif decision == "reject":
         cr.status = "rejected"
         audit.record(db, actor=actor_email or "authority", role="owner" if owner and owner.owner_email == actor_email.lower().strip() else "admin",
-                     action="modification.rejected", unit=u, status="rejected", note=note)
+                     action="modification.rejected", unit=u, status="rejected", note=note, category=category)
         notify(db, cr.requested_by, f"Change request #{cr.id} on {u.unit_ulpin} was REJECTED. {note}".strip(), u.unit_ulpin, cr.id)
+    elif decision == "changes":
+        cr.status = "changes_requested"
+        audit.record(db, actor=actor_email or "authority", role="admin", action="modification.changes_requested", unit=u,
+                     status="changes_requested", note=note, category=category)
+        notify(db, cr.requested_by, f"Change request #{cr.id} on {u.unit_ulpin}: changes requested. {note}".strip(), u.unit_ulpin, cr.id)
     else:
-        raise IntegrityError(400, "decision must be 'approve' or 'reject'")
+        raise IntegrityError(400, "decision must be 'approve', 'reject' or 'changes'")
     db.flush()
     return cr
 
