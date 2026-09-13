@@ -147,7 +147,8 @@ input[type="checkbox"] { accent-color: var(--accent); }
 option { background: #0d1219; color: var(--ink); }
 
 /* header nav */
-header { border-bottom: 1px solid var(--line); background: rgba(10, 14, 20, 0.9) !important; backdrop-filter: blur(10px); }
+header { position: relative; z-index: 60; border-bottom: 1px solid var(--line); background: rgba(10, 14, 20, 0.9) !important; backdrop-filter: blur(10px); }
+header details[open] > summary { color: var(--accent); }
 footer { background: transparent !important; border-color: rgba(159, 176, 195, 0.14) !important; color: var(--ink-dim) !important; }
 
 /* maps */
