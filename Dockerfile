@@ -32,6 +32,7 @@ RUN if [ "$AI" = "1" ]; then \
       pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu ; \
     else pip install --no-cache-dir -r backend/requirements-lite.txt ; fi
 COPY backend/ backend/
+COPY start.sh ./
 COPY --from=web /web/.next frontend/.next
 COPY --from=web /web/public frontend/public
 COPY --from=web /web/node_modules frontend/node_modules
@@ -40,4 +41,4 @@ RUN mkdir -p /data && chmod -R 777 /data && useradd -m app && chown -R app /app 
 USER app
 ENV DATABASE_URL=sqlite:////data/tribhoomi.db API_URL=http://127.0.0.1:8000 CORS_ORIGINS=*
 EXPOSE 7860
-CMD ["sh", "-c", "(cd backend && uvicorn app.main:app --host 127.0.0.1 --port 8000 &) && cd frontend && npx next start -p ${PORT}"]
+CMD ["sh", "/app/start.sh"]

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import threading
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -174,8 +175,18 @@ def alerts(actor: Actor = Depends(current_actor), db: Session = Depends(get_db))
 
 # ------------------------------------------------------------------ flagship demo story
 
+# Two setups at once would both pick the same "next tower" number and one would fail on the
+# unique building ULPIN, so the scenario is built by one request at a time (double-clicks happen).
+_flagship_lock = threading.Lock()
+
+
 @router.post("/demo/flagship")
 def flagship(stage: str = "setup", db: Session = Depends(get_db)):
+    with _flagship_lock:
+        return _build_flagship(stage, db)
+
+
+def _build_flagship(stage: str, db: Session):
     """
     Builds the boundary-modification story on a dedicated demo project so every step has real records:
     3-B/3-C/3-D registered and verified; 3-C modification overlapping 3-D submitted (stage=setup);

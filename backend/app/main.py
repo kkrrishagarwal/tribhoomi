@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from . import errors
 from .config import CORS_ORIGINS, DATABASE_URL
 from .db import Base, SessionLocal, engine
 from .models import Parcel
@@ -33,6 +34,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 app.add_middleware(CORSMiddleware, allow_origins=["*"] if "*" in CORS_ORIGINS else CORS_ORIGINS, allow_methods=["*"], allow_headers=["*"])
+errors.install(app)
 
 for r in (parcels, units, ulpin, validate, dashboard, ai, integrity, layouts, market, lifecycle, analysis):
     app.include_router(r.router)
