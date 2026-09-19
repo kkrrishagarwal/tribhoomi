@@ -23,12 +23,12 @@ export default function RoleSwitcher() {
 
   return (
     <label className="flex items-center gap-2 text-xs">
-      <span className="demo-badge">Demo role</span>
+      <span className="demo-badge !hidden sm:!inline-flex">Demo role</span>
       <span className={`rounded px-1.5 py-0.5 font-semibold uppercase text-white ${badge}`}>{s.role === "admin" ? "authority" : s.role}</span>
       <select
         value={currentKey}
         onChange={(e) => { const o = options.find((x) => x.key === e.target.value); if (o) setSession(o.session); }}
-        className="max-w-[220px] rounded-md border border-navy-700 bg-navy-800 px-2 py-1 text-slate-100"
+        className="max-w-[170px] rounded-md border sm:max-w-[220px] border-navy-700 bg-navy-800 px-2 py-1 text-slate-100"
       >
         {options.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
       </select>

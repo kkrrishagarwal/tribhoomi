@@ -94,16 +94,16 @@ export default function SignIn() {
   return (
     <div className="blueprint relative isolate min-h-[calc(100vh-7rem)] overflow-hidden">
       <Skyline />
-      <div className="page relative grid w-full grid-cols-[minmax(0,1fr)] items-start gap-10 py-10 lg:grid-cols-[1fr_minmax(0,30rem)]">
-        <section className="min-w-0 lg:pt-10">
-          <div className="flex items-center gap-3">
+      <div className="page relative grid w-full grid-cols-[minmax(0,1fr)] items-start gap-6 py-4 lg:gap-10 lg:py-10 lg:grid-cols-[1fr_minmax(0,30rem)]">
+        <section className="order-2 min-w-0 lg:order-1 lg:pt-10">
+          <div className="hidden items-center gap-3 lg:flex">
             <span className="grid h-12 w-12 place-items-center rounded-lg bg-saffron-500 text-lg font-bold text-navy-900 glow-warn">3D</span>
             <div>
               <div className="text-2xl font-bold tracking-tight">त्रिभूमि Tribhoomi</div>
               <div className="font-mono text-xs uppercase tracking-[0.2em] text-accent">3D land records for India</div>
             </div>
           </div>
-          <h1 className="mt-8 text-4xl font-bold leading-tight sm:text-5xl">Vertical land records,<br /><span className="text-accent">verified.</span></h1>
+          <h1 className="text-3xl font-bold leading-tight sm:text-5xl lg:mt-8">Vertical land records,<br /><span className="text-accent">verified.</span></h1>
           <p className="lead mt-4 max-w-md">Every parcel, building, floor and flat gets its own identity. Builders register, the authority verifies, and anyone can check that a boundary was never changed behind the owner&apos;s back.</p>
           <div className="mt-8 max-w-md border-l border-[var(--line-strong)] pl-3 font-mono text-sm">
             <div className="label">Example ID of one flat</div>
@@ -116,7 +116,7 @@ export default function SignIn() {
           </div>
         </section>
 
-        <section className="glass min-w-0 rounded-xl p-5 sm:p-6" aria-labelledby="signin-title">
+        <section className="glass order-1 min-w-0 rounded-xl p-4 sm:p-6 lg:order-2" aria-labelledby="signin-title">
           <div className="flex items-center justify-between gap-3">
             <h2 id="signin-title" className="h2">Choose your role</h2>
             <span className="demo-badge">Demo mode</span>
