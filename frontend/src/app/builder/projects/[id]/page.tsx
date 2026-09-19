@@ -1,4 +1,5 @@
 "use client";
+import LoadError from "@/components/LoadError";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
@@ -15,13 +16,13 @@ function Inner() {
   const [err, setErr] = useState<string | null>(null); const [msg, setMsg] = useState<string | null>(null);
   const [adding, setAdding] = useState(false); const [h, setH] = useState<Health | null>(null);
   const [b, setB] = useState({ name: "Tower A", num_floors: 12, building_type: "residential", num_basements: 0, parking_levels: 0, commercial_ground_floor: false, amenities: "", auto_units_per_floor: 0 });
-  const load = () => { api.project(id).then(setP).catch((e) => setErr(e.message)); api.projectHealth(id).then(setH).catch(() => null); };
+  const load = () => { api.project(id).then((d) => { setP(d); setErr(null); }).catch((e) => setErr(e.message)); api.projectHealth(id).then(setH).catch(() => null); };
   useEffect(() => { load(); /* eslint-disable-line react-hooks/exhaustive-deps */ }, [id]);
   async function addBuilding() {
     setMsg(null);
     try { const r = await api.addBuilding(id, b); setMsg(r.message); setAdding(false); load(); } catch (e: any) { setMsg(`Error: ${e.message}`); }
   }
-  if (err) return <div className="page text-red-300">{err}</div>;
+  if (err) return <LoadError message={err} onRetry={load} what="this project" />;
   if (!p) return <ScanLoader text="Loading project" className="p-16" />;
   const c = p.counts;
   return (

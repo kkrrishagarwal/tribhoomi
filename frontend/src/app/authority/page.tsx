@@ -5,6 +5,8 @@ import { api, type PropertyUnit, type QueueRow } from "@/lib/api";
 import PriorityBadge from "@/components/analysis/PriorityBadge";
 import StatusPill from "@/components/StatusPill";
 import Gate from "@/components/Gate";
+import LoadError from "@/components/LoadError";
+import { useLoad } from "@/lib/useLoad";
 import ScanLoader from "@/components/ScanLoader";
 import { DemoBadge } from "@/components/StatusPill";
 import PendingTable from "@/components/PendingTable";
@@ -12,9 +14,10 @@ import PendingTable from "@/components/PendingTable";
 export default function Authority() { return <Gate roles={["admin"]} signin="/signin/authority"><Inner /></Gate>; }
 
 function Inner() {
-  const [d, setD] = useState<{ authority: string; counts: Record<string, number>; pending: PropertyUnit[]; conflicts: PropertyUnit[] } | null>(null);
+  const { data: d, error, reload } = useLoad(() => api.authorityDashboard());
   const [q, setQ] = useState<QueueRow[] | null>(null);
-  useEffect(() => { api.authorityDashboard().then(setD).catch(() => null); api.authorityQueue().then((r) => setQ(r.queue)).catch(() => setQ([])); }, []);
+  useEffect(() => { api.authorityQueue().then((r) => setQ(r.queue)).catch(() => setQ([])); }, []);
+  if (error) return <LoadError message={error} onRetry={reload} what="the verification queue" />;
   if (!d) return <ScanLoader text="Loading verification queue" className="p-16" />;
   const c = d.counts;
   return (

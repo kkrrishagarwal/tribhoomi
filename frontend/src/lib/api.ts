@@ -246,20 +246,94 @@ export type Checklist = { tpid: string; ready: boolean; items: { key: string; te
 export type Health = { project: string; units: number; verified: number; pending: number; needs_changes: number; conflicts: number; disputes: number; modification_requests: number; readiness_percent: number; method: string };
 export type Alert = { at: string; tpid: string; label: string; building: string; event: string; status: string; pending_modification: boolean; area: { before_sqft: number; after_sqft: number } | null };
 
+/**
+ * One request path for the whole app.
+ *  - Every request has a timeout, so nothing waits forever.
+ *  - Reads (GET) are retried while the server is unreachable: a free host that went to sleep needs
+ *    ~1 minute to wake, and the ServerStatus banner explains the wait. Writes are never auto-retried.
+ *  - Every failure becomes an ApiError whose message a person can read.
+ */
+export type ServerState = "ok" | "waking" | "down";
+export const SERVER_EVENT = "tribhoomi-server";
+let serverState: ServerState = "ok";
+function announce(state: ServerState) {
+  if (state === serverState || typeof window === "undefined") return;
+  serverState = state;
+  window.dispatchEvent(new CustomEvent(SERVER_EVENT, { detail: state }));
+}
+
+export class ApiError extends Error {
+  constructor(message: string, public status: number, public kind: "network" | "timeout" | "server" | "client") { super(message); }
+}
+
+const WAKE_BUDGET_MS = 100_000;   // keep retrying reads for this long before giving up
+const SLOW_MS = 5_000;            // a read still pending after this shows the wake-up banner
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function attempt(path: string, init: RequestInit, timeoutMs: number): Promise<Response> {
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), timeoutMs);
+  try {
+    return await fetch(path, { ...init, signal: ctl.signal });
+  } catch (e) {
+    if (ctl.signal.aborted) throw new ApiError("The server took too long to answer. Please try again.", 0, "timeout");
+    throw new ApiError("Could not reach the server. Check your connection and try again.", 0, "network");
+  } finally { clearTimeout(timer); }
+}
+
+/** A proxy in front of a dead or sleeping backend answers 502/503/504, or a 500 that is not our JSON. */
+async function unreachable(r: Response): Promise<boolean> {
+  if ([502, 503, 504].includes(r.status)) return true;
+  if (r.status !== 500) return false;
+  try { const j = await r.clone().json(); return typeof j?.detail === "undefined"; } catch { return true; }
+}
+
+async function request(path: string, init: RequestInit, opts: { retry: boolean; timeoutMs: number }): Promise<Response> {
+  const started = Date.now();
+  const slow = opts.retry ? setTimeout(() => announce("waking"), SLOW_MS) : undefined;
+  try {
+    for (let n = 0; ; n++) {
+      let r: Response | null = null;
+      let failure: ApiError | null = null;
+      try { r = await attempt(path, init, opts.timeoutMs); } catch (e) { failure = e as ApiError; }
+      if (r && !(await unreachable(r))) {
+        announce("ok");
+        if (!r.ok) throw new ApiError(await errText(r), r.status, r.status >= 500 ? "server" : "client");
+        return r;
+      }
+      failure ??= new ApiError("The server is not responding right now. Please try again in a minute.", r ? r.status : 0, "server");
+      if (!opts.retry || Date.now() - started > WAKE_BUDGET_MS) { if (opts.retry) announce("down"); throw failure; }
+      announce("waking");
+      await sleep(Math.min(2000 + n * 1000, 6000));
+    }
+  } finally { clearTimeout(slow); }
+}
+
 async function get<T>(path: string): Promise<T> {
-  const r = await fetch(path, { cache: "no-store", headers: sessionHeaders() });
-  if (!r.ok) throw new Error(await errText(r));
+  const r = await request(path, { cache: "no-store", headers: sessionHeaders() }, { retry: true, timeoutMs: 30_000 });
   return r.json();
 }
 
 async function send<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const r = await fetch(path, { method, headers: { "content-type": "application/json", ...sessionHeaders() }, body: body === undefined ? undefined : JSON.stringify(body) });
-  if (!r.ok) throw new Error(await errText(r));
+  const r = await request(path, { method, headers: { "content-type": "application/json", ...sessionHeaders() }, body: body === undefined ? undefined : JSON.stringify(body) }, { retry: false, timeoutMs: 60_000 });
   return r.json();
 }
 
+async function upload<T>(path: string, body: FormData | undefined, timeoutMs: number): Promise<T> {
+  const r = await request(path, { method: "POST", body, headers: sessionHeaders() }, { retry: false, timeoutMs });
+  return r.json();
+}
+
+const STATUS_TEXT: Record<number, string> = { 401: "Please sign in to do this.", 403: "Your current role is not allowed to do this.", 404: "That record was not found.", 409: "This conflicts with the current record. Reload and try again.", 413: "That file is too large.", 423: "This record is locked and cannot be edited directly.", 429: "Too many requests. Please wait a moment." };
+
 async function errText(r: Response) {
-  try { const j = await r.json(); return typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail ?? j); } catch { return `${r.status}`; }
+  try {
+    const j = await r.json();
+    if (typeof j.detail === "string" && j.detail) return j.detail;
+    // FastAPI validation list (older servers): name the fields instead of dumping JSON
+    if (Array.isArray(j.detail)) return j.detail.slice(0, 4).map((e: any) => `${String((e.loc ?? []).filter((x: any) => x !== "body").join(" ")).replace(/_/g, " ")}: ${e.msg}`).join(". ") + ".";
+  } catch {}
+  return STATUS_TEXT[r.status] ?? (r.status >= 500 ? "The server hit a problem. Please try again." : `The request could not be completed (code ${r.status}).`);
 }
 
 export const api = {
@@ -281,12 +355,10 @@ export const api = {
   previewChange: (ulpin: string, body: { plot_number?: string; dx?: number; dy?: number; dw?: number; dd?: number }) => send<Diff>("POST", `/api/builder/units/${ulpin}/preview`, body),
   requestChange: (ulpin: string, body: { plot_number?: string; dx?: number; dy?: number; dw?: number; dd?: number; reason: string }) => send<{ ok: boolean; message: string; change_request: ChangeRequest }>("POST", `/api/builder/units/${ulpin}/change-requests`, body),
   createLayout: (body: any) => send<{ ok: boolean; message: string; parcel: ParcelFeature }>("POST", "/api/layouts", body),
-  uploadLayout: async (file: File, opts: { name?: string; num_floors?: number; units_per_floor?: number; land_use?: string } = {}) => {
+  uploadLayout: (file: File, opts: { name?: string; num_floors?: number; units_per_floor?: number; land_use?: string } = {}) => {
     const fd = new FormData(); fd.append("file", file);
     const q = new URLSearchParams(Object.entries(opts).filter(([, v]) => v !== undefined).map(([k, v]) => [k, String(v)]));
-    const r = await fetch(`/api/layouts/upload?${q}`, { method: "POST", body: fd, headers: sessionHeaders() });
-    if (!r.ok) throw new Error(await errText(r));
-    return r.json() as Promise<{ ok: boolean; message: string; parcels: ParcelFeature[] }>;
+    return upload<{ ok: boolean; message: string; parcels: ParcelFeature[] }>(`/api/layouts/upload?${q}`, fd, 60_000);
   },
   // investor
   investorOverview: () => get<{ investor: string; units: UnitRow[]; pending_requests: ChangeRequest[]; past_requests: ChangeRequest[]; notifications: Notice[] }>("/api/investor/overview"),
@@ -328,13 +400,8 @@ export const api = {
   authorityDecideV2: (ident: string, decision: "approve" | "reject" | "changes", note = "", category = "") => send<{ ok: boolean; message: string; unit: PropertyUnit }>("POST", `/api/authority/units/${encodeURIComponent(ident)}/decide`, { decision, note, category }),
   decideV2: (id: number, decision: "approve" | "reject" | "changes", note = "", category = "") => send<{ ok: boolean; change_request: ChangeRequest; unit: UnitRow }>("POST", `/api/change-requests/${id}/decide`, { decision, note, category }),
   aiStatus: () => get<{ model_id: string; loaded: boolean; error: string | null; mode?: string; explanation?: string }>("/api/ai/status"),
-  extract: async (file?: File) => {
-    const fd = new FormData();
-    if (file) fd.append("file", file);
-    const r = await fetch("/api/ai/extract", { method: "POST", body: file ? fd : undefined, headers: sessionHeaders() });
-    if (!r.ok) throw new Error(await errText(r));
-    return r.json() as Promise<ExtractResult>;
-  },
+  // the hosted model can need ~20 s to warm up, local CPU inference a few seconds
+  extract: (file?: File) => { const fd = new FormData(); if (file) fd.append("file", file); return upload<ExtractResult>("/api/ai/extract", file ? fd : undefined, 120_000); },
 };
 
 export const USAGE_COLORS: Record<string, string> = {

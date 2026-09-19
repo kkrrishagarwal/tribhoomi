@@ -1,4 +1,5 @@
 "use client";
+import LoadError from "@/components/LoadError";
 import { useT } from "@/lib/i18n";
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -22,7 +23,7 @@ export default function BuilderPage() {
   useEffect(() => { if (s.role !== "public") load(); }, [s]);
 
   if (s.role === "public") return <div className="mx-auto max-w-lg p-8 text-center text-sm text-slate-600">Switch to a <b>Builder</b> identity from the header dropdown to open the builder desk.</div>;
-  if (err) return <div className="p-8 text-red-600">{err}</div>;
+  if (err) return <LoadError message={err} onRetry={load} what="the modification requests" />;
   if (!data) return <ScanLoader text="Loading builder desk" className="p-16" />;
 
   const pending = data.change_requests.filter((c) => c.status === "pending");
@@ -44,8 +45,8 @@ export default function BuilderPage() {
       {u.flags?.has_open_dispute && <span className="rounded bg-red-100 px-1.5 py-0.5 text-red-800">disputed</span>}
       <span className="ml-auto flex gap-1">
         {!locked && <button onClick={() => setActive({ unit: u, mode: "edit" })} className="btn-ghost !py-1">Edit</button>}
-        {!locked && <button onClick={() => setActive({ unit: u, mode: "assign" })} className="btn-primary !py-1">Assign to investor</button>}
-        {locked && <button onClick={() => setActive({ unit: u, mode: "request" })} disabled={u.flags?.has_pending_request} className="btn-accent !py-1">Request change</button>}
+        {!locked && <button onClick={() => setActive({ unit: u, mode: "assign" })} className="btn-ghost !py-1">Assign to investor</button>}
+        {locked && <button onClick={() => setActive({ unit: u, mode: "request" })} disabled={u.flags?.has_pending_request} className="btn-ghost !py-1">Request change</button>}
       </span>
     </li>
   );

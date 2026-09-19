@@ -3,6 +3,7 @@
  * Builder form used for BOTH direct edits (unsold unit) and change requests (sold unit).
  * The boundary is proposed as metres of shift/resize, and the preview shows old vs new.
  */
+import Tech, { coordText, sizeText } from "@/components/Tech";
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { api, type Diff, type UnitRow } from "@/lib/api";
@@ -56,8 +57,8 @@ export default function ChangeRequestForm({ unit, mode, onDone, onCancel }: { un
             <thead><tr className="text-slate-500"><th></th><th className="text-left">Before</th><th className="text-left">After</th></tr></thead>
             <tbody>
               <tr><td className="pr-2 text-slate-500">Plot no.</td><td>{diff.before.plot_number}</td><td className={diff.before.plot_number !== diff.after.plot_number ? "font-semibold text-orange-700" : ""}>{diff.after.plot_number}</td></tr>
-              <tr><td className="pr-2 text-slate-500">Min (x,y)</td><td className="font-mono">{diff.before.bounding_volume.min.slice(0, 2).join(", ")}</td><td className="font-mono">{diff.after.bounding_volume.min.slice(0, 2).join(", ")}</td></tr>
-              <tr><td className="pr-2 text-slate-500">Max (x,y)</td><td className="font-mono">{diff.before.bounding_volume.max.slice(0, 2).join(", ")}</td><td className="font-mono">{diff.after.bounding_volume.max.slice(0, 2).join(", ")}</td></tr>
+              <tr><td className="pr-2 text-slate-500">Size</td><td>{sizeText(diff.before.bounding_volume)}</td><td className={sizeText(diff.before.bounding_volume) !== sizeText(diff.after.bounding_volume) ? "font-semibold text-orange-700" : ""}>{sizeText(diff.after.bounding_volume)}</td></tr>
+              <tr><td colSpan={3}><Tech>Before {coordText(diff.before.bounding_volume)}<br />After {coordText(diff.after.bounding_volume)}</Tech></td></tr>
             </tbody>
           </table>
         </div>

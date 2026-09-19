@@ -61,12 +61,18 @@ code, kbd, pre, .font-mono { font-family: var(--font-mono); }
 .glow-ok { box-shadow: 0 0 0 1px rgba(74, 222, 128, 0.5), 0 0 16px rgba(74, 222, 128, 0.28); }
 
 .btn { @apply inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed; }
-.btn-primary { @apply btn; background: rgba(34, 232, 200, 0.14); color: var(--accent); border: 1px solid var(--line-strong); }
-.btn-primary:hover { background: rgba(34, 232, 200, 0.24); box-shadow: 0 0 14px rgba(34, 232, 200, 0.3); }
-.btn-accent { @apply btn font-semibold; color: #0a0e14; background: linear-gradient(180deg, #f6a24f, #f28c28); border: 1px solid rgba(246, 162, 79, 0.6); box-shadow: 0 0 14px rgba(242, 140, 40, 0.3); }
-.btn-accent:hover { filter: brightness(1.08); }
+/* Button hierarchy — at most ONE .btn-accent is visible per screen state:
+     .btn-accent   the single primary action: solid teal + glow (the brightest thing on the page)
+     .btn-primary  secondary action / selected chip: teal tint, no glow
+     .btn-ghost    everything else */
+.btn-accent { @apply btn font-semibold; color: #04120f; background: linear-gradient(180deg, #4ff3d8, var(--accent)); border: 1px solid rgba(34, 232, 200, 0.9); box-shadow: 0 0 0 1px rgba(34, 232, 200, 0.25), 0 0 18px rgba(34, 232, 200, 0.35); }
+.btn-accent:hover:not(:disabled) { filter: brightness(1.06); box-shadow: 0 0 0 1px rgba(34, 232, 200, 0.4), 0 0 26px rgba(34, 232, 200, 0.5); }
+.btn-accent:disabled { box-shadow: none; }
+.btn-primary { @apply btn; background: rgba(34, 232, 200, 0.1); color: var(--accent); border: 1px solid rgba(34, 232, 200, 0.35); }
+.btn-primary:hover:not(:disabled) { background: rgba(34, 232, 200, 0.18); }
 .btn-ghost { @apply btn; background: rgba(255, 255, 255, 0.03); color: var(--ink); border: 1px solid rgba(159, 176, 195, 0.25); }
-.btn-ghost:hover { border-color: var(--line-strong); color: var(--accent); }
+.btn-ghost:hover:not(:disabled) { border-color: var(--line-strong); color: var(--accent); }
+.btn:focus-visible, .btn-accent:focus-visible, .btn-primary:focus-visible, .btn-ghost:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .label { @apply text-[11px] font-semibold uppercase tracking-[0.14em]; color: var(--ink-dim); }
 
 /* HUD number panel (dashboard) */
@@ -85,6 +91,38 @@ code, kbd, pre, .font-mono { font-family: var(--font-mono); }
 
 /* grid texture behind maps */
 .grid-bg { background-image: linear-gradient(rgba(34, 232, 200, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(34, 232, 200, 0.05) 1px, transparent 1px); background-size: 28px 28px; }
+
+/* progressive disclosure: readable first, raw data on request */
+.tech { margin-top: 6px; }
+.tech > summary { cursor: pointer; font-size: 12px; color: var(--ink-dim); text-decoration: underline dotted; text-underline-offset: 3px; list-style: none; }
+.tech > summary::-webkit-details-marker { display: none; }
+.tech > summary:hover { color: var(--accent); }
+.tech[open] > summary { color: var(--ink-muted); }
+
+/* main nav + section tabs */
+.navlink { border-radius: 6px; padding: 6px 12px; color: var(--ink); }
+.navlink:hover { background: rgba(34, 232, 200, 0.1); }
+.navlink[aria-current="page"] { background: rgba(34, 232, 200, 0.14); color: var(--accent); }
+.subtabs { border-bottom: 1px solid rgba(159, 176, 195, 0.14); background: rgba(18, 22, 31, 0.6); }
+.subtabs-inner { max-width: 1536px; margin: 0 auto; display: flex; align-items: center; gap: 2px; padding: 0 16px; overflow-x: auto; white-space: nowrap; }
+.subtab { padding: 10px 12px; font-size: 14px; color: var(--ink-muted); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.subtab:hover { color: var(--ink); }
+.subtab[aria-current="page"] { color: var(--accent); border-bottom-color: var(--accent); }
+.subtab-minor { font-size: 13px; color: var(--ink-dim); }
+
+/* server status strip under the header (waking / down / back) */
+.status-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; padding: 8px 16px; font-size: 14px; text-align: center; color: #fcd34d; background: rgba(251, 191, 36, 0.1); border-bottom: 1px solid rgba(251, 191, 36, 0.4); }
+.status-bar[data-state="down"] { color: #fca5a5; background: rgba(248, 113, 113, 0.1); border-color: rgba(248, 113, 113, 0.5); }
+.status-bar[data-state="back"] { color: #86efac; background: rgba(74, 222, 128, 0.1); border-color: rgba(74, 222, 128, 0.4); }
+
+/* survey-plan backdrop (sign-in): fine 28px grid, heavier line every 5 cells, faded towards the edges */
+.blueprint {
+  background-image:
+    radial-gradient(ellipse at 30% 40%, transparent 0%, var(--bg) 92%),
+    linear-gradient(rgba(34, 232, 200, 0.13) 1px, transparent 1px), linear-gradient(90deg, rgba(34, 232, 200, 0.13) 1px, transparent 1px),
+    linear-gradient(rgba(34, 232, 200, 0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(34, 232, 200, 0.045) 1px, transparent 1px);
+  background-size: 100% 100%, 140px 140px, 140px 140px, 28px 28px, 28px 28px;
+}
 
 /* ------------------------------------------------------------------ dark remap
    Pages were written with light Tailwind classes. Rather than rewriting every

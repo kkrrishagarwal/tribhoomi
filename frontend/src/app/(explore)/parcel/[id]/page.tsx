@@ -1,4 +1,6 @@
 "use client";
+import Tech, { coordText, sizeText } from "@/components/Tech";
+import LoadError from "@/components/LoadError";
 import { useT } from "@/lib/i18n";
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -11,7 +13,7 @@ import ScanLoader from "@/components/ScanLoader";
 import UlpinQR from "@/components/UlpinQR";
 import { downloadCertificate } from "@/lib/certificate";
 
-const Building3D = dynamic(() => import("@/components/Building3D"), { ssr: false, loading: () => <div className="grid h-full place-items-center text-slate-400">Loading 3D scene…</div> });
+const Building3D = dynamic(() => import("@/components/Building3D"), { ssr: false, loading: () => <div className="absolute inset-0 grid place-items-center"><ScanLoader text="Loading 3D viewer" /></div> });
 
 export default function ParcelPage() {
   const { id } = useParams<{ id: string }>();
@@ -49,11 +51,11 @@ export default function ParcelPage() {
   const building = model?.buildings[0];
   const totalUnits = building?.floors.reduce((n, f) => n + f.units.length, 0) ?? 0;
 
-  if (error) return <div className="p-8 text-red-600">Could not load parcel: {error}</div>;
+  if (error) return <LoadError message={error.replace(/^Error: /, "")} what="this parcel" />;
   if (!model || !building) return <ScanLoader text="Building 3D model" className="p-16" />;
 
   return (
-    <div className="mx-auto grid h-[calc(100vh-7rem)] max-w-screen-2xl grid-cols-1 gap-4 p-4 lg:grid-cols-[1fr_400px]">
+    <div className="mx-auto grid h-[calc(100vh-10.25rem)] min-h-[520px] max-w-screen-2xl grid-cols-1 gap-4 p-4 lg:grid-cols-[1fr_400px]">
       <section className="card relative overflow-hidden">
         <WebGLGate>
         <Building3D
@@ -176,9 +178,9 @@ export default function ParcelPage() {
                 <dt className="text-slate-500">Usage</dt><dd className="capitalize">{selected.usage_type}</dd>
                 <dt className="text-slate-500">Floor area</dt><dd>{selected.area_sqm} m²</dd>
                 <dt className="text-slate-500">Elevation</dt><dd>{selected.volume.min[2]} m to {selected.volume.max[2]} m</dd>
-                <dt className="text-slate-500">Bounding volume</dt>
-                <dd className="font-mono">[{selected.volume.min.join(", ")}] → [{selected.volume.max.join(", ")}]</dd>
+                <dt className="text-slate-500">Size</dt><dd>{sizeText(selected.volume)}</dd>
               </dl>
+              <Tech>Bounding volume (x, y, z in metres from the parcel origin)<br />{coordText(selected.volume, 3)}</Tech>
               <div>
                 <div className="flex items-center justify-between">
                   <div className="label">{t("h.ownership")}</div>

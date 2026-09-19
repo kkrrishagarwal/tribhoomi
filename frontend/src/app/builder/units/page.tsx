@@ -1,15 +1,17 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { api, type PropertyUnit } from "@/lib/api";
 import Gate from "@/components/Gate";
+import LoadError from "@/components/LoadError";
+import { useLoad } from "@/lib/useLoad";
 import ScanLoader from "@/components/ScanLoader";
 import StatusPill from "@/components/StatusPill";
 
 export default function Units() { return <Gate roles={["builder", "admin"]} signin="/signin/builder"><Inner /></Gate>; }
 function Inner() {
-  const [rows, setRows] = useState<PropertyUnit[] | null>(null); const [q, setQ] = useState(""); const [st, setSt] = useState("");
-  useEffect(() => { api.builderUnits().then((d) => setRows(d.units)).catch(() => setRows([])); }, []);
+  const { data: rows, error, reload } = useLoad(() => api.builderUnits().then((d) => d.units)); const [q, setQ] = useState(""); const [st, setSt] = useState("");
+  if (error) return <LoadError message={error} onRetry={reload} what="your units" />;
   if (!rows) return <ScanLoader text="Loading units" className="p-16" />;
   const f = rows.filter((u) => (!st || u.verification_status === st) && (!q || `${u.label} ${u.building.name} ${u.project.name} ${u.tpid}`.toLowerCase().includes(q.toLowerCase())));
   return (

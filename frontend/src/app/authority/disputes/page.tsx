@@ -1,4 +1,5 @@
 "use client";
+import LoadError from "@/components/LoadError";
 import { useT } from "@/lib/i18n";
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
@@ -20,7 +21,7 @@ export default function AdminPage() {
   useEffect(() => { if (s.role === "admin") load(); }, [s]);
 
   if (s.role !== "admin") return <div className="mx-auto max-w-lg p-8 text-center text-sm text-slate-600">Switch to the <b>Government</b> identity from the header dropdown to open the audit view.</div>;
-  if (err) return <div className="p-8 text-red-600">{err}</div>;
+  if (err) return <LoadError message={err} onRetry={load} what="the disputes" />;
   if (!d) return <ScanLoader text="Loading audit queue" className="p-16" />;
 
   const Before = ({ b, a }: { b: any; a: any }) => (

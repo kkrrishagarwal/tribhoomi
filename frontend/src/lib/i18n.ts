@@ -20,6 +20,9 @@ const DICT: Record<string, { en: string; hi: string }> = {
   "nav.ulpin": { en: "ULPIN engine", hi: "ULPIN इंजन" },
   "nav.ai": { en: "AI footprint", hi: "AI फुटप्रिंट" },
   "nav.dashboard": { en: "Dashboard", hi: "डैशबोर्ड" },
+  "nav.explore": { en: "Explore", hi: "खोजें" },
+  "nav.adminShort": { en: "Admin", hi: "प्रशासन" },
+  "nav.signin": { en: "Sign in", hi: "साइन इन" },
   "nav.demo": { en: "Guided demo", hi: "गाइडेड डेमो" },
   // page and section headers
   "h.parcels": { en: "Surface parcels", hi: "भूखंड (सतह)" },
@@ -27,7 +30,7 @@ const DICT: Record<string, { en: string; hi: string }> = {
   "h.ulpin2d": { en: "2D ULPIN (surface parcel)", hi: "2D ULPIN (सतह भूखंड)" },
   "h.expand": { en: "Expand vertically → 3D", hi: "ऊर्ध्वाधर विस्तार → 3D" },
   "h.builderTool": { en: "Builder layout tool", hi: "बिल्डर लेआउट टूल" },
-  "h.validator": { en: "Run topology validator", hi: "टोपोलॉजी सत्यापन चलाएँ" },
+  "h.validator": { en: "Check this building for overlaps", hi: "ओवरलैप की जाँच करें" },
   "h.ownership": { en: "Ownership registry", hi: "स्वामित्व रजिस्ट्री" },
   "h.unitUlpin": { en: "3D ULPIN · unit", hi: "3D ULPIN · इकाई" },
   "h.trace": { en: "Traceability (parent chain)", hi: "अनुरेखण (मूल श्रृंखला)" },

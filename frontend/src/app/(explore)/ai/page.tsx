@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useT } from "@/lib/i18n";
 import { useEffect, useState } from "react";
 import { api, type ExtractResult } from "@/lib/api";
@@ -30,6 +31,11 @@ export default function AiPage() {
 
   return (
     <div className="mx-auto max-w-screen-xl space-y-4 p-4">
+      <div className="card flex flex-wrap items-center gap-x-3 gap-y-1 p-3 text-sm">
+        <span className="label">Supporting tool</span>
+        <span className="text-ink-muted">Step 1 of registering a plot: find the building outline in an aerial photo, so nobody has to type coordinates. In the real flow it runs inside the map.</span>
+        <Link href="/map" className="ml-auto text-accent hover:underline">Use it on the map (Builder tools) →</Link>
+      </div>
       <div>
         <h1 className="text-xl font-semibold">{t("h.ai")}</h1>
         <p className="text-sm text-slate-600">

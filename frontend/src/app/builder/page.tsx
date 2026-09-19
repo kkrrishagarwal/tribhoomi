@@ -1,4 +1,5 @@
 "use client";
+import LoadError from "@/components/LoadError";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api, type ProjectSummary } from "@/lib/api";
@@ -16,7 +17,7 @@ function Inner() {
   const [d, setD] = useState<{ counts: Record<string, number>; projects: ProjectSummary[] } | null>(null);
   const [err, setErr] = useState<string | null>(null);
   useEffect(() => { api.builderDashboard().then(setD).catch((e) => setErr(e.message)); }, [s]);
-  if (err) return <div className="page text-red-300">Could not load your dashboard: {err}. Check that the server is running and try again.</div>;
+  if (err) return <LoadError message={err} what="your dashboard" />;
   if (!d) return <ScanLoader text="Loading builder dashboard" className="p-16" />;
   const c = d.counts;
   return (

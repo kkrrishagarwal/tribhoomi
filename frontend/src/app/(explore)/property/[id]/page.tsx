@@ -44,7 +44,7 @@ export default function PropertyPageView() {
   async function verify() { setChecking(true); try { setV(await api.propertyVerify(id)); } finally { setChecking(false); } }
   function toggleSave() { try { const l = new Set(JSON.parse(localStorage.getItem("tribhoomi.saved") || "[]") as string[]); if (!p) return; l.has(p.tpid) ? l.delete(p.tpid) : l.add(p.tpid); localStorage.setItem("tribhoomi.saved", JSON.stringify([...l])); setSaved(l.has(p.tpid)); } catch {} }
   async function fileDispute() { if (!p || !dispute) return; try { const r = await api.fileDispute({ unit_ulpin: p.land_record_id, description: dispute, raised_by: s.user || "anonymous" }); setMsg(r.message); setDispute(null); load(); } catch (e: any) { setMsg(`Error: ${e.message}`); } }
-  if (err) return <div className="page"><div className="card mx-auto max-w-lg p-6"><div className="text-lg font-semibold">Property not found</div><p className="mt-1 text-sm text-slate-500">{err}</p><Link href="/discover" className="btn-primary mt-4">Search properties</Link></div></div>;
+  if (err) return <div className="page"><div className="card mx-auto max-w-lg p-6"><div className="text-lg font-semibold">{/not found/i.test(err) ? "Property not found" : "Could not open this property"}</div><p className="mt-1 text-sm text-slate-500">{err}</p><Link href="/discover" className="btn-primary mt-4">Search properties</Link></div></div>;
   if (!p) return <ScanLoader text="Loading property" className="p-16" />;
   const tone = p.verification_status === "verified" ? "ok" : p.verification_status === "pending" ? "warn" : "bad";
   const isBuilder = s.role === "builder" || s.role === "admin";
@@ -128,7 +128,7 @@ export default function PropertyPageView() {
               {(s.role === "owner" || s.role === "investor" || s.role === "public") && !dispute && <button onClick={() => setDispute("")} className="btn-ghost justify-center text-red-300">Report a problem</button>}
               <Link href={`/parcel/${p.project.id}`} className="btn-ghost justify-center">View in 3D</Link>
             </div>
-            {dispute !== null && <div className="mt-2"><textarea value={dispute} onChange={(e) => setDispute(e.target.value)} rows={3} className="w-full rounded-lg border px-2 py-1" placeholder="What is wrong with this record?" /><div className="mt-2 flex gap-2"><button onClick={fileDispute} disabled={dispute.trim().length < 5} className="btn-accent !py-1">File dispute</button><button onClick={() => setDispute(null)} className="btn-ghost !py-1">Cancel</button></div></div>}
+            {dispute !== null && <div className="mt-2"><textarea value={dispute} onChange={(e) => setDispute(e.target.value)} rows={3} className="w-full rounded-lg border px-2 py-1" placeholder="What is wrong with this record?" /><div className="mt-2 flex gap-2"><button onClick={fileDispute} disabled={dispute.trim().length < 5} className="btn-primary !py-1">File dispute</button><button onClick={() => setDispute(null)} className="btn-ghost !py-1">Cancel</button></div></div>}
             {msg && <div className={`mt-2 rounded-lg p-2 ${msg.startsWith("Error") ? "bg-red-50 text-red-800" : "bg-emerald-50 text-emerald-800"}`}>{msg}</div>}
           </div>
           <details className="card p-4 text-xs"><summary className="cursor-pointer text-sm text-slate-500">Advanced technical details</summary>

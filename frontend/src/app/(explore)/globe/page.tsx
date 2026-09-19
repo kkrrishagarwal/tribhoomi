@@ -22,6 +22,7 @@ export default function GlobePage() {
   const t = useLayoutTools(true);
   const mapRef = useRef<CesiumHandle | null>(null);
   const [floorNo, setFloorNo] = useState<number | null>(null);
+  const [showMarket, setShowMarket] = useState(false);
   const [marketSel, setMarketSel] = useState<MarketFeature | null>(null);
   const [status, setStatus] = useState<CesiumStatus | null>(null);
   const [showOsm, setShowOsm] = useState(true);
@@ -32,7 +33,7 @@ export default function GlobePage() {
   const selFloor = t.selected && floorNo !== null ? t.models[t.selected.id]?.buildings[0]?.floors.find((f) => f.floor_number === floorNo) : null;
 
   return (
-    <div className="mx-auto grid h-[calc(100vh-7.5rem)] max-w-screen-2xl grid-cols-1 gap-4 p-4 lg:grid-cols-[400px_1fr]">
+    <div className="mx-auto grid h-[calc(100vh-10.25rem)] min-h-[520px] max-w-screen-2xl grid-cols-1 gap-4 p-4 lg:grid-cols-[400px_1fr]">
       <ParcelSidebar
         t={t} isBuilder={isBuilder} canDraw={!broken}
         onSelect={(id) => { t.setSelectedId(id); setFloorNo(null); mapRef.current?.flyToParcel(id); }}
@@ -64,9 +65,9 @@ export default function GlobePage() {
               drawing={t.drawing}
               onDrawComplete={(r) => { t.setRing(r); t.setDrawing(false); t.setMsg(null); }}
               candidates={t.candidates} showOsmBuildings={showOsm} onStatus={setStatus}
-              market={t.market} onSelectMarket={setMarketSel}
+              market={showMarket ? t.market : []} onSelectMarket={setMarketSel}
             />
-            <div className="absolute bottom-3 left-3"><MapLegend /></div>
+            <div className="absolute bottom-3 left-3 flex flex-col items-start gap-1">{showMarket && <MapLegend />}<label className="glass flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-xs"><input type="checkbox" checked={showMarket} onChange={(e) => { setShowMarket(e.target.checked); if (!e.target.checked) setMarketSel(null); }} /> Show real NCR context <span className="text-ink-dim">(RERA-listed projects, informational)</span></label></div>
             {marketSel && (
               <div className="glass animate-panel-in absolute bottom-3 right-3 max-w-xs rounded-lg p-3">
                 <button onClick={() => setMarketSel(null)} className="float-right text-xs text-slate-500 hover:underline">close</button>

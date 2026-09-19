@@ -4,13 +4,16 @@ import Link from "next/link";
 import { api, type Alert, type PropertyPage } from "@/lib/api";
 import { useSession } from "@/lib/useSession";
 import Gate from "@/components/Gate";
+import LoadError from "@/components/LoadError";
+import { useLoad } from "@/lib/useLoad";
 import ScanLoader from "@/components/ScanLoader";
 import StatusPill from "@/components/StatusPill";
 
 export default function Owner() { return <Gate roles={["owner", "admin"]} signin="/signin/owner"><Inner /></Gate>; }
 function Inner() {
-  const s = useSession(); const [rows, setRows] = useState<PropertyPage[] | null>(null); const [alerts, setAlerts] = useState<Alert[]>([]);
-  useEffect(() => { api.ownerProperties().then((d) => setRows(d.properties)).catch(() => setRows([])); api.alerts().then((a) => setAlerts(a.alerts)).catch(() => null); }, [s]);
+  const s = useSession(); const { data: rows, error, reload } = useLoad(() => api.ownerProperties().then((d) => d.properties), [s]); const [alerts, setAlerts] = useState<Alert[]>([]);
+  useEffect(() => { api.alerts().then((a) => setAlerts(a.alerts)).catch(() => null); }, [s]);
+  if (error) return <LoadError message={error} onRetry={reload} what="your properties" />;
   if (!rows) return <ScanLoader text="Loading your properties" className="p-16" />;
   return (
     <div className="page">

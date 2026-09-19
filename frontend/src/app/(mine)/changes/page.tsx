@@ -1,4 +1,6 @@
 "use client";
+import Tech, { coordText, sizeText } from "@/components/Tech";
+import LoadError from "@/components/LoadError";
 import { useT } from "@/lib/i18n";
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
@@ -25,7 +27,7 @@ export default function InvestorPage() {
   useEffect(() => { if (s.role === "owner" || s.role === "investor" || s.role === "admin") load(); }, [s]);
 
   if (s.role !== "owner" && s.role !== "investor" && s.role !== "admin") return <div className="mx-auto max-w-lg p-8 text-center text-sm text-slate-600">Sign in as a <b>Property Owner</b> to see changes to your property.</div>;
-  if (err) return <div className="p-8 text-red-600">{err}</div>;
+  if (err) return <LoadError message={err} onRetry={load} what="your plots" />;
   if (!data) return <ScanLoader text="Loading registered plots" className="p-16" />;
 
   async function decide(id: number, d: "approve" | "reject") {
@@ -98,8 +100,9 @@ export default function InvestorPage() {
               <dl className="mt-2 grid grid-cols-[100px_1fr] gap-x-2 gap-y-0.5">
                 <dt className="text-slate-500">Plot number</dt><dd>{u.label}</dd>
                 <dt className="text-slate-500">Area / usage</dt><dd>{u.area_sqm} m² · {u.usage_type}</dd>
-                <dt className="text-slate-500">Boundary</dt><dd className="font-mono">[{u.volume.min.slice(0, 2).join(", ")}] → [{u.volume.max.slice(0, 2).join(", ")}] m</dd>
+                <dt className="text-slate-500">Size</dt><dd>{sizeText(u.volume)}</dd>
               </dl>
+              <Tech>Boundary corners (x, y in metres)<br />{coordText(u.volume)}</Tech>
               <div className="mt-2"><DiffMap before={u.footprint} after={baseline} labels={["Current registered boundary", ""]} height={140} /></div>
               <div className="mt-2 flex flex-wrap gap-2">
                 <Link href={`/verify?ulpin=${encodeURIComponent(u.unit_ulpin)}`} className="btn-ghost !py-1">Version history</Link>

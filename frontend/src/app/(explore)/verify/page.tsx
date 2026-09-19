@@ -1,4 +1,5 @@
 "use client";
+import Tech, { coordText, sizeText } from "@/components/Tech";
 import { useT } from "@/lib/i18n";
 import { Suspense, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
@@ -102,7 +103,8 @@ function VerifyInner() {
                       <span className={`rounded px-1.5 py-0.5 font-mono text-[11px] uppercase tracking-wider text-white ${tone}`}>{v.approval_status === "baseline" ? "registered baseline" : v.approval_status === "approved" ? "owner-approved change" : "NOT approved by owner"}</span>
                       <span className="font-mono text-xs text-slate-500">{v.created_at.slice(0, 16).replace("T", " ")}</span>
                     </div>
-                    <div className="mt-1 text-xs text-slate-700">Plot no. <b>{v.plot_number}</b> · boundary <span className="font-mono">[{v.bounding_volume.min.slice(0, 2).join(", ")}] → [{v.bounding_volume.max.slice(0, 2).join(", ")}] m</span> · by {v.changed_by}</div>
+                    <div className="mt-1 text-xs text-slate-700">Plot no. <b>{v.plot_number}</b> · {sizeText(v.bounding_volume as { min: number[]; max: number[] })} · by {v.changed_by}</div>
+                    <Tech>Boundary corners (x, y in metres)<br />{coordText(v.bounding_volume as { min: number[]; max: number[] })}</Tech>
                     {v.change_reason && <div className="text-xs text-slate-500">“{v.change_reason}”{v.change_request_id ? ` · change request #${v.change_request_id}` : ""}</div>}
                   </li>
                 );
@@ -138,7 +140,7 @@ function VerifyInner() {
                 <div className="text-sm font-semibold text-red-800">Report a problem · linked to {r.unit.unit_ulpin} v{r.current?.version_number ?? "-"}</div>
                 <input value={report.by} onChange={(e) => setReport({ ...report, by: e.target.value })} placeholder="Your name or email" className="mt-2 w-full rounded border border-slate-300 px-2 py-1" />
                 <textarea value={report.text} onChange={(e) => setReport({ ...report, text: e.target.value })} rows={3} placeholder="What is wrong?" className="mt-2 w-full rounded border border-slate-300 px-2 py-1" />
-                <div className="mt-2 flex gap-2"><button onClick={fileReport} disabled={report.text.trim().length < 5} className="btn-accent">File dispute</button><button onClick={() => setReport(null)} className="btn-ghost">Cancel</button></div>
+                <div className="mt-2 flex gap-2"><button onClick={fileReport} disabled={report.text.trim().length < 5} className="btn-primary">File dispute</button><button onClick={() => setReport(null)} className="btn-ghost">Cancel</button></div>
               </div>
             )}
           </div>

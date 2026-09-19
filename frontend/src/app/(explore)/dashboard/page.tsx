@@ -1,4 +1,5 @@
 "use client";
+import LoadError from "@/components/LoadError";
 import { useT } from "@/lib/i18n";
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -50,7 +51,7 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   useEffect(() => { api.dashboard().then(setD).catch((e) => setError(String(e))); api.marketContext().then(setMc).catch(() => null); }, []);
 
-  if (error) return <div className="p-8 text-red-600">{error}</div>;
+  if (error) return <LoadError message={error.replace(/^Error: /, "")} what="the registry statistics" />;
   if (!d) return <ScanLoader text="Aggregating registry" className="p-16" />;
   const c = d.counts;
 
@@ -97,7 +98,9 @@ export default function DashboardPage() {
         </table>
       </div>
       {mc && (
-        <div className="card p-4">
+        <details className="card p-4">
+          <summary className="cursor-pointer text-sm text-ink-muted">Supporting context: {mc.summary.projects} real NCR projects (informational, never linked to ULPINs)</summary>
+          <div className="mt-3">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <div className="text-sm font-semibold">Regional context · real NCR projects ({mc.summary.projects}, {mc.summary.mapped} on the map)</div>
             <div className="text-[11px] text-slate-500">{Object.entries(mc.summary.by_confidence).map(([k, v]) => `${v} ${k.replace("_", "-")}`).join(" · ")}</div>
@@ -116,7 +119,8 @@ export default function DashboardPage() {
               </tbody>
             </table>
           </div>
-        </div>
+          </div>
+        </details>
       )}
       {d.recent_conflicts.length > 0 && (
         <div className="card p-4">

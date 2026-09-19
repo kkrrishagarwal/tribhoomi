@@ -1,15 +1,16 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import dynamic from "next/dynamic";
 import { api } from "@/lib/api";
 import Gate from "@/components/Gate";
+import LoadError from "@/components/LoadError";
+import { useLoad } from "@/lib/useLoad";
 import ScanLoader from "@/components/ScanLoader";
 const StatusMap = dynamic(() => import("@/components/analysis/StatusMap"), { ssr: false });
-type Data = Awaited<ReturnType<typeof api.authorityMap>>;
 export default function MapPage() { return <Gate roles={["admin"]} signin="/signin/authority"><Inner /></Gate>; }
 function Inner() {
-  const [d, setD] = useState<Data | null>(null); const [f, setF] = useState("");
-  useEffect(() => { api.authorityMap().then(setD).catch(() => null); }, []);
+  const { data: d, error, reload } = useLoad(() => api.authorityMap()); const [f, setF] = useState("");
+  if (error) return <LoadError message={error} onRetry={reload} what="the conflict map" />;
   if (!d) return <ScanLoader text="Loading stored unit footprints" className="p-16" />;
   const counts: Record<string, number> = {}; d.features.forEach((x) => { counts[x.properties.status] = (counts[x.properties.status] || 0) + 1; });
   return (

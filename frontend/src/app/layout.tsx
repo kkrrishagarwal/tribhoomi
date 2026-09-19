@@ -5,6 +5,7 @@ import NavLinks from "@/components/NavLinks";
 import RoleSwitcher from "@/components/RoleSwitcher";
 import LangToggle from "@/components/LangToggle";
 import T from "@/components/T";
+import ServerStatus from "@/components/ServerStatus";
 
 export const metadata: Metadata = {
   title: "Tribhoomi — 3D ULPIN",
@@ -24,7 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="mx-auto flex max-w-screen-2xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-2.5">
             <Link href="/" className="flex items-center gap-2">
               <span className="grid h-8 w-8 place-items-center rounded-md bg-saffron-500 font-bold text-white glow-warn">3D</span>
-              <span className="font-semibold tracking-tight">त्रिभूमि Tribhoomi <span className="hidden font-normal text-slate-400 sm:inline">· property identity &amp; integrity</span></span>
+              <span className="font-semibold tracking-tight">त्रिभूमि Tribhoomi <span className="hidden font-normal text-slate-400 sm:inline">· land records for every floor</span></span>
             </Link>
             <div className="ml-auto flex flex-wrap items-center gap-4">
               <NavLinks />
@@ -33,6 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
           </div>
         </header>
+        <ServerStatus />
         <main className="flex-1">{children}</main>
         <footer className="border-t border-slate-200 bg-white px-4 py-2 text-center text-xs text-slate-500">
           <T k="h.footer" /> · <span className="demo-badge">Demonstration dataset</span>

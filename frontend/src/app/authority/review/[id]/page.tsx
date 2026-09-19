@@ -43,7 +43,7 @@ function Inner() {
       </div>
       {an && (
         <div className="mt-4 flex flex-wrap gap-2">
-          {an.change && <button onClick={() => setTab(tab === "changed" ? null : "changed")} className={tab === "changed" ? "btn-primary" : "btn-accent"}>What changed?</button>}
+          {an.change && <button onClick={() => setTab(tab === "changed" ? null : "changed")} className={tab === "changed" ? "btn-primary" : "btn-ghost"}>What changed?</button>}
           <button onClick={() => setTab(tab === "simulate" ? null : "simulate")} className={tab === "simulate" ? "btn-primary" : "btn-ghost"}>Simulate modification</button>
           <button onClick={() => setTab(tab === "timeline" ? null : "timeline")} className={tab === "timeline" ? "btn-primary" : "btn-ghost"}>Risk timeline</button>
         </div>
@@ -76,7 +76,7 @@ function Inner() {
             <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} placeholder="Additional note for the permanent record" className="mt-2 w-full rounded-lg border px-3 py-2 text-sm" />
             {msg && <div className={`mt-2 rounded-lg p-2 text-sm ${msg.startsWith("Error") ? "border border-red-300 bg-red-50 text-red-800" : "bg-emerald-50 text-emerald-800"}`}>{msg}</div>}
             <div className="mt-3 flex flex-col gap-2">
-              <button onClick={() => decide("approve")} disabled={busy || !(u.verification_status === "pending" || an?.change?.mode === "registered_vs_proposed")} className="btn-primary justify-center">{an?.change?.mode === "registered_vs_proposed" ? "Approve modification · record new version" : "Approve · mark verified"}</button>
+              <button onClick={() => decide("approve")} disabled={busy || !(u.verification_status === "pending" || an?.change?.mode === "registered_vs_proposed")} className="btn-accent justify-center">{an?.change?.mode === "registered_vs_proposed" ? "Approve modification · record new version" : "Approve · mark verified"}</button>
               <button onClick={() => decide("changes")} disabled={busy || !(u.verification_status === "pending" || an?.change?.mode === "registered_vs_proposed") || (!cat && note.trim().length < 3)} className="btn-ghost justify-center">Request changes</button>
               <button onClick={() => decide("reject")} disabled={busy || !(u.verification_status === "pending" || an?.change?.mode === "registered_vs_proposed") || (!cat && note.trim().length < 3)} className="btn-ghost justify-center text-red-300">Reject</button>
             </div>
