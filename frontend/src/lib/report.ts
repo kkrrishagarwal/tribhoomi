@@ -25,7 +25,7 @@ export async function downloadReport(p: PropertyPage, v: VerifyResultV2 | null, 
   let y = 60; doc.setFontSize(10);
   for (const [k, val] of rows) { doc.setTextColor(110, 110, 110); doc.text(k, 14, y); doc.setTextColor(20, 20, 20); const lines = doc.splitTextToSize(val, 110); doc.text(lines, 62, y); y += 6 * lines.length + 2; doc.setDrawColor(230, 230, 230); doc.line(14, y - 2, W - 14 - 34, y - 2); }
   if (v) {
-    y += 4; doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(20, 20, 20); doc.text(`Verify Before You Invest: ${v.result}`, 14, y); y += 6;
+    y += 4; doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(20, 20, 20); doc.text(`Spatial verification result: ${v.result}`, 14, y); y += 6;
     doc.setFont("helvetica", "normal"); doc.setFontSize(9);
     for (const c of v.checks) { doc.setTextColor(c.ok ? 21 : 185, c.ok ? 128 : 28, c.ok ? 61 : 28); doc.text(`${c.ok ? "✓" : "✗"} ${c.text} — ${c.detail}`, 16, y, { maxWidth: W - 32 }); y += 5; }
   }

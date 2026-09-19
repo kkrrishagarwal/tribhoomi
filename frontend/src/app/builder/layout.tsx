@@ -8,5 +8,5 @@ const TABS = [
 ];
 
 export default function BuilderLayout({ children }: { children: React.ReactNode }) {
-  return <><SubTabs roles={["builder", "admin"]} label="My plots" tabs={TABS} />{children}</>;
+  return <><SubTabs roles={["builder", "admin"]} label="My properties" tabs={TABS} />{children}</>;
 }

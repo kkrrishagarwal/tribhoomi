@@ -3,8 +3,11 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { api, type Analysis } from "@/lib/api";
-import PriorityBadge from "@/components/analysis/PriorityBadge";
 import ChangeAnalysis from "@/components/analysis/ChangeAnalysis";
+import PropertyImpact from "@/components/analysis/PropertyImpact";
+import WhyFlagged from "@/components/analysis/WhyFlagged";
+import PropertyRelationships from "@/components/analysis/PropertyRelationships";
+import ProductLoop from "@/components/ProductLoop";
 import SimulationPanel from "@/components/analysis/SimulationPanel";
 import RiskTimeline from "@/components/analysis/RiskTimeline";
 import Gate from "@/components/Gate";
@@ -36,11 +39,13 @@ function Inner() {
   const u = r.unit;
   return (
     <div className="page">
-      <Link href="/authority" className="text-sm text-slate-500 hover:underline">← Command center</Link>
+      <Link href="/authority" className="text-sm text-slate-500 hover:underline">← Review queue</Link>
       <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
         <div><div className="label">Property verification request</div><h1 className="h1">{u.building.name} — Unit {u.label}</h1><div className="text-slate-500">{u.project.name}, {u.project.city} · {u.floor_label} · {u.unit_type} · {u.area_sqft.toLocaleString()} sq ft</div></div>
-        <div className="flex flex-col items-end gap-2"><StatusPill status={u.verification_status} />{an && <PriorityBadge p={an.priority} />}</div>
+        <div className="flex flex-col items-end gap-2"><StatusPill status={u.verification_status} /><span className="demo-badge">Simulated authority · demo mode</span></div>
       </div>
+      <ProductLoop className="mt-4" active={4} caption="You are the reviewer. Tribhoomi shows what changed and who it affects; the decision and its reason are yours, and both are kept in the audit trail." />
+      <div className="mt-3"><WhyFlagged an={an} flags={u.flags} status={u.verification_status} /></div>
       {an && (
         <div className="mt-4 flex flex-wrap gap-2">
           {an.change && <button onClick={() => setTab(tab === "changed" ? null : "changed")} className={tab === "changed" ? "btn-primary" : "btn-ghost"}>What changed?</button>}
@@ -48,7 +53,7 @@ function Inner() {
           <button onClick={() => setTab(tab === "timeline" ? null : "timeline")} className={tab === "timeline" ? "btn-primary" : "btn-ghost"}>Risk timeline</button>
         </div>
       )}
-      {an && tab === "changed" && an.change && <div className="mt-3"><ChangeAnalysis c={an.change} footprint={r.building.footprint_local} neighbours={r.neighbours.map((n) => ({ label: n.label, tpid: n.tpid, volume: n.volume }))} /></div>}
+      {an && tab === "changed" && an.change && <div className="mt-3 space-y-3"><ChangeAnalysis c={an.change} footprint={r.building.footprint_local} neighbours={r.neighbours.map((n) => ({ label: n.label, tpid: n.tpid, volume: n.volume }))} /><PropertyImpact an={an} label={u.label} /></div>}
       {an && tab === "simulate" && <div className="mt-3"><SimulationPanel tpid={u.tpid} footprint={r.building.footprint_local} parcel={r.parcel.local} current={{ min: [u.volume!.min[0], u.volume!.min[1]], max: [u.volume!.max[0], u.volume!.max[1]] }} neighbours={r.neighbours.map((n) => ({ label: n.label, tpid: n.tpid, volume: n.volume }))} /></div>}
       {an && tab === "timeline" && <div className="card mt-3 p-4"><RiskTimeline events={an.timeline} /></div>}
       {an && <div className="card mt-3 p-3 text-sm"><span className="label">Tribhoomi insight</span> <span className="ml-2">{an.insight}</span></div>}
@@ -65,6 +70,7 @@ function Inner() {
               neighbours={r.neighbours.map((n) => ({ label: n.label, volume: n.volume, conflict: r.validation.conflicts.some((c) => c.with_tpid === n.tpid) }))} />
             <div className="mt-2 flex gap-2 text-sm"><Link href={`/parcel/${u.project.id}`} className="btn-ghost !py-1">View in 3D</Link><Link href={`/property/${u.tpid}`} className="btn-ghost !py-1">Public property page</Link></div>
           </div>
+          {an && <PropertyRelationships an={an} label={u.label} />}
           {r.versions.length > 0 && <div className="card p-4"><div className="label mb-2">Previous versions</div><ul className="text-sm">{r.versions.map((v) => <li key={v.id}>v{v.version_number} · {v.created_at.slice(0, 10)} · {v.approval_status} · {v.plot_number}</li>)}</ul></div>}
           <div><div className="label mb-2">Audit history</div><AuditTable rows={r.audit} /></div>
         </div>

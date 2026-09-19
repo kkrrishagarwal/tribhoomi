@@ -277,7 +277,7 @@ export class ApiError extends Error {
 }
 
 const WAKE_BUDGET_MS = 100_000;   // keep retrying reads for this long before giving up
-const SLOW_MS = 5_000;            // a read still pending after this shows the wake-up banner
+const SLOW_MS = 8_000;            // a read still pending after this shows the wake-up banner (kept above normal slow responses)
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function attempt(path: string, init: RequestInit, timeoutMs: number): Promise<Response> {

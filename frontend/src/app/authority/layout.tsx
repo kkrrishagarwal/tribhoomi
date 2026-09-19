@@ -10,5 +10,5 @@ const TABS = [
 ];
 
 export default function AuthorityLayout({ children }: { children: React.ReactNode }) {
-  return <><SubTabs roles={["admin"]} label="Admin" tabs={TABS} />{children}</>;
+  return <><SubTabs roles={["admin"]} label="Authority review" tabs={TABS} />{children}</>;
 }

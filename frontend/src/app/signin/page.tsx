@@ -57,12 +57,15 @@ export default function SignIn() {
   const [email, setEmail] = useState("");
   const [ids, setIds] = useState<Awaited<ReturnType<typeof api.identities>> | null>(null);
   const [going, setGoing] = useState(false);
+  const [next, setNext] = useState<string | null>(null);   // page that sent the visitor here (internal paths only)
 
   // ?role=builder preselects a card. Read from window so the page never waits on a Suspense boundary.
   useEffect(() => {
     const q = (new URLSearchParams(window.location.search).get("role") || "").toLowerCase();
     const key = (ALIASES[q] ?? q) as RoleKey;
     if (ROLES.some((r) => r.key === key)) setOpen(key);
+    const n = new URLSearchParams(window.location.search).get("next") || "";
+    if (/^\/(?!\/)/.test(n)) setNext(n);
   }, []);
 
   // Demo identities are optional. On a sleeping free host this can take a minute, so keep retrying quietly.
@@ -79,7 +82,7 @@ export default function SignIn() {
     if (going) return;
     setGoing(true);
     setSession({ role: r.role, user, name: display });
-    router.push(r.home);
+    router.push(next ?? r.home);
   };
 
   const choicesFor = (key: RoleKey): Choice[] | null => {
@@ -104,7 +107,7 @@ export default function SignIn() {
             </div>
           </div>
           <h1 className="text-3xl font-bold leading-tight sm:text-5xl lg:mt-8">Vertical land records,<br /><span className="text-accent">verified.</span></h1>
-          <p className="lead mt-4 max-w-md">Every parcel, building, floor and flat gets its own identity. Builders register, the authority verifies, and anyone can check that a boundary was never changed behind the owner&apos;s back.</p>
+          <p className="lead mt-4 max-w-md">Every parcel, building, floor and flat gets its own identity. Builders register, an authority reviews, and anyone can check whether a boundary was changed without approval.</p>
           <div className="mt-8 max-w-md border-l border-[var(--line-strong)] pl-3 font-mono text-sm">
             <div className="label">Example ID of one flat</div>
             <div className="mt-1 flex flex-wrap text-ink">

@@ -7,5 +7,5 @@ export default function MineLayout({ children }: { children: React.ReactNode }) 
   const tabs = s.role === "investor"
     ? [{ href: "/saved", label: "Saved properties" }]
     : [{ href: "/owner", label: "My property" }, { href: "/changes", label: "Changes & approvals" }, { href: "/saved", label: "Saved" }];
-  return <><SubTabs label="My plots" tabs={tabs} />{children}</>;
+  return <><SubTabs label="My properties" tabs={tabs} />{children}</>;
 }

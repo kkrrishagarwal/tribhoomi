@@ -23,7 +23,7 @@ export default function RoleSwitcher() {
 
   return (
     <label className="flex items-center gap-2 text-xs">
-      <span className="demo-badge !hidden sm:!inline-flex">Demo role</span>
+      <span className="demo-badge !hidden sm:!inline-flex">{s.role === "public" ? "Prototype" : "Prototype · demo mode"}</span>
       <span className={`rounded px-1.5 py-0.5 font-semibold uppercase text-white ${badge}`}>{s.role === "admin" ? "authority" : s.role}</span>
       <select
         value={currentKey}

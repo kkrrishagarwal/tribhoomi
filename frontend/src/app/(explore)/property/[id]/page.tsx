@@ -7,8 +7,10 @@ import { api, type Analysis, type PropertyPage, type VerifyResultV2 } from "@/li
 import TrustSummary from "@/components/analysis/TrustSummary";
 import RiskTimeline from "@/components/analysis/RiskTimeline";
 import ChangeAnalysis from "@/components/analysis/ChangeAnalysis";
-import DependencyGraph from "@/components/analysis/DependencyGraph";
-import PriorityBadge from "@/components/analysis/PriorityBadge";
+import PropertyImpact from "@/components/analysis/PropertyImpact";
+import WhyFlagged from "@/components/analysis/WhyFlagged";
+import PropertyRelationships from "@/components/analysis/PropertyRelationships";
+import ProductLoop from "@/components/ProductLoop";
 import { CompletenessPanel, InsightPanel } from "@/components/analysis/Insight";
 import { useSession } from "@/lib/useSession";
 import StatusPill, { DemoBadge } from "@/components/StatusPill";
@@ -47,6 +49,9 @@ export default function PropertyPageView() {
   if (err) return <div className="page"><div className="card mx-auto max-w-lg p-6"><div className="text-lg font-semibold">{/not found/i.test(err) ? "Property not found" : "Could not open this property"}</div><p className="mt-1 text-sm text-slate-500">{err}</p><Link href="/discover" className="btn-primary mt-4">Search properties</Link></div></div>;
   if (!p) return <ScanLoader text="Loading property" className="p-16" />;
   const tone = p.verification_status === "verified" ? "ok" : p.verification_status === "pending" ? "warn" : "bad";
+  const ch = an?.change;
+  const loopStage = !ch ? 0 : ch.mode === "registered_vs_proposed" ? 4 : ch.approved === false ? 2 : 5;
+  const loopCaption = !ch ? "No change is recorded or proposed for this property." : ch.mode === "registered_vs_proposed" ? "A change has been proposed and analysed. It is waiting for authority review; the registered record is unchanged." : ch.approved === false ? "The record differs from its registered baseline and the change was never approved." : `The change was approved and recorded as version ${p.version_count}. Earlier versions are kept.`;
   const isBuilder = s.role === "builder" || s.role === "admin";
   return (
     <div className="page">
@@ -59,10 +64,13 @@ export default function PropertyPageView() {
       {an ? <div className="mt-4"><TrustSummary t={an.trust} /></div> : (p.flags.has_unapproved_change || p.disputes_open > 0 || p.verification_status === "conflict") && (
         <div className="mt-4 rounded-xl border-2 border-red-400 bg-red-50 p-4 text-red-900"><div className="font-bold">⚠ This property needs attention</div></div>
       )}
-      {an && <div className="mt-3 flex flex-wrap items-center gap-3 text-sm"><span className="text-slate-500">Review priority:</span><PriorityBadge p={an.priority} /></div>}
+      <ProductLoop className="mt-4" active={loopStage} caption={loopCaption} />
+      <div className="mt-3"><WhyFlagged an={an} flags={p.flags} status={p.verification_status} /></div>
+      {an?.change && <div className="mt-3 flex flex-wrap items-center gap-3"><a href="#what-changed" className="btn-accent text-base">What changed?</a><span className="text-sm text-ink-muted">Before and after, the boundary movement, and who it affects.</span></div>}
 
       <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_340px]">
         <div className="space-y-4">
+          {an?.change && <div id="what-changed" className="scroll-mt-4 space-y-4"><ChangeAnalysis c={an.change} footprint={fp} neighbours={nb} /><PropertyImpact an={an} label={p.label} /></div>}
           <div className="card p-4">
             <div className="flex flex-wrap items-center justify-between gap-2"><div className="font-semibold">Property integrity</div><div className="font-mono text-2xl"><span className={tone === "ok" ? "text-emerald-300" : tone === "warn" ? "text-amber-300" : "text-red-300"}>{p.integrity.score}</span> <span className="text-sm text-slate-500">/ 100 · Tribhoomi Integrity Score</span></div></div>
             <div className="mt-3 grid gap-2 sm:grid-cols-5">{Object.entries(p.integrity.parts).map(([k, val]) => <div key={k} className="rounded-lg bg-slate-50 p-2 text-center"><div className="font-mono text-lg">{val}</div><div className="text-xs text-slate-500">{k}</div></div>)}</div>
@@ -71,7 +79,7 @@ export default function PropertyPageView() {
               <li>{p.verification_status === "verified" ? "✓" : "○"} Authority verified{p.verification_id && <span className="font-mono text-xs text-slate-500"> · {p.verification_id}</span>}</li><li>{p.flags.has_unapproved_change ? "⚠" : "✓"} Modification history {p.flags.has_unapproved_change ? "contains an unapproved change" : "consistent"}</li>
             </ul>
             <div className="mt-4 flex flex-wrap gap-2">
-              <button onClick={verify} disabled={checking} className="btn-accent text-base">🛡️ Verify before you invest</button>
+              <button onClick={verify} disabled={checking} className={an?.change ? "btn-primary" : "btn-accent text-base"}>Run spatial verification</button>
               <button onClick={() => downloadReport(p, v, an)} className="btn-ghost">Generate evidence package (PDF)</button>
               {s.user && <button onClick={toggleWatch} className="btn-ghost">{watching ? "👁 Watching" : "Watch this property"}</button>}
               {s.role === "investor" && <button onClick={toggleSave} className="btn-ghost">{saved ? "★ Saved" : "☆ Save"}</button>}
@@ -86,7 +94,6 @@ export default function PropertyPageView() {
           </div>
 
           {an && <InsightPanel text={an.insight} />}
-          {an?.change && <ChangeAnalysis c={an.change} footprint={fp} neighbours={nb} />}
           {p.change && !an?.change && (
             <div className="card p-4">
               <div className="font-semibold">⚠ Change detected</div>
@@ -104,7 +111,7 @@ export default function PropertyPageView() {
           )}
 
           {an && <div className="card p-4"><div className="flex items-center justify-between"><div className="font-semibold">Property risk timeline</div><div className="label">when did it start needing attention?</div></div><div className="mt-3"><RiskTimeline events={an.timeline} /></div></div>}
-          {an && <DependencyGraph g={an.graph} />}
+          {an && <PropertyRelationships an={an} label={p.label} />}
           <div className="card p-4"><div className="font-semibold">Property history</div><div className="mt-3"><HistoryTimeline items={p.history} /></div>
             {p.versions.length > 1 && <details className="mt-3"><summary className="cursor-pointer text-sm text-accent">Version history ({p.versions.length})</summary><ul className="mt-2 text-sm">{[...p.versions].reverse().map((ver) => <li key={ver.version_number} className="border-t py-1">v{ver.version_number}{ver.version_number === p.versions.length ? " (current)" : ""} · {ver.created_at.slice(0, 10)} · {ver.plot_number} · {Math.round(ver.area_sqm * 10.7639).toLocaleString()} sq ft · <span className={ver.approval_status === "unapproved" ? "text-red-300" : "text-emerald-300"}>{ver.approval_status}</span></li>)}</ul></details>}
           </div>
@@ -114,7 +121,7 @@ export default function PropertyPageView() {
           <div className="card p-4">
             <div className="label">Tribhoomi Property Passport</div>
             <div className="mt-1 font-mono text-xl text-accent">{p.tpid}</div>
-            <div className="text-xs text-slate-500">Tribhoomi's internal identity linking project, building, floor and unit.</div>
+            <div className="text-xs text-slate-500">Tribhoomi Property ID (TPID): Tribhoomi&apos;s own reference linking project, building, floor and unit. It is not a government ID.</div>
             <dl className="mt-3 grid grid-cols-[90px_1fr] gap-y-1 text-sm"><dt className="text-slate-500">Property</dt><dd>{p.building.name} — {p.label}</dd><dt className="text-slate-500">Floor</dt><dd>{p.floor_label}</dd><dt className="text-slate-500">Area</dt><dd>{p.area_sqft.toLocaleString()} sq ft</dd><dt className="text-slate-500">Status</dt><dd>{p.status_label}</dd><dt className="text-slate-500">Verified</dt><dd>{p.verified_at ? p.verified_at.slice(0, 10) : "—"}</dd></dl>
             <div className="mt-3 flex items-center gap-3"><PassportQR tpid={p.tpid} /><div className="text-xs text-slate-500">Scan to open the public passport. It shows verification status only, never owner details.</div></div>
             <Link href={`/passport/${p.tpid}`} className="btn-ghost mt-3 w-full justify-center">Open public passport</Link>

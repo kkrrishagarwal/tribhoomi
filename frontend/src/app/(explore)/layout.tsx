@@ -11,5 +11,5 @@ const TABS = [
 ];
 
 export default function ExploreLayout({ children }: { children: React.ReactNode }) {
-  return <><SubTabs label="Explore" tabs={TABS} />{children}</>;
+  return <><SubTabs label="Explore properties" tabs={TABS} />{children}</>;
 }

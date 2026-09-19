@@ -92,6 +92,35 @@ code, kbd, pre, .font-mono { font-family: var(--font-mono); }
 /* grid texture behind maps */
 .grid-bg { background-image: linear-gradient(rgba(34, 232, 200, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(34, 232, 200, 0.05) 1px, transparent 1px); background-size: 28px 28px; }
 
+/* the product loop strip: Property > Change > Analysis > Impact > Authority review > New version */
+.loop { display: flex; flex-wrap: wrap; gap: 6px 4px; align-items: center; font-size: 13px; }
+.loop-step { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(159, 176, 195, 0.22); color: var(--ink-muted); white-space: nowrap; }
+.loop-step:not(:last-child)::after { content: "→"; margin-left: 8px; margin-right: -14px; color: var(--ink-dim); transform: translateX(10px); }
+.loop-step:not(:last-child) { margin-right: 14px; }
+.loop-n { font-family: var(--font-mono); font-size: 11px; color: var(--ink-dim); }
+.loop-step[aria-current="step"] { border-color: var(--line-strong); color: var(--accent); background: rgba(34, 232, 200, 0.1); }
+.loop-step[aria-current="step"] .loop-n { color: var(--accent); }
+
+/* "Why is this flagged?" */
+.flagged { border: 1px solid rgba(251, 191, 36, 0.45); background: rgba(251, 191, 36, 0.06); border-radius: 0.75rem; padding: 14px 16px; }
+
+/* Property impact rows */
+.impact-row { display: grid; grid-template-columns: 170px 1fr; gap: 4px 16px; padding: 8px 0; border-top: 1px solid rgba(159, 176, 195, 0.14); font-size: 14.5px; }
+.impact-row:first-child { border-top: 0; }
+.impact-row dt { color: var(--ink-dim); font-size: 13px; }
+@media (max-width: 560px) { .impact-row { grid-template-columns: 1fr; } }
+
+/* Property relationships: a vertical chain with arrows */
+.rel-chain { display: flex; flex-direction: column; align-items: flex-start; gap: 18px; }
+.rel-chain > li { position: relative; }
+.rel-chain > li:not(:last-child)::after { content: "↓"; position: absolute; left: 14px; bottom: -18px; color: var(--ink-dim); font-size: 13px; line-height: 18px; }
+.rel-chain-tight { gap: 16px; }
+.rel-node { display: inline-flex; flex-direction: column; border: 1px solid rgba(159, 176, 195, 0.25); border-radius: 8px; padding: 5px 12px; font-size: 14px; }
+a.rel-node:hover { border-color: var(--line-strong); }
+.rel-node-on { border-color: var(--line-strong); color: var(--accent); }
+.rel-node-bad { border-color: rgba(248, 113, 113, 0.6); color: #fca5a5; }
+.rel-type { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-dim); }
+
 /* Area Insights: the disclaimer has the weight of the demo badge, and "not publicly available" is a first-class value */
 .insight-disclaimer { border: 1px solid rgba(251, 191, 36, 0.5); background: rgba(251, 191, 36, 0.08); color: #fcd34d; border-radius: 6px; padding: 6px 10px; font-size: 13px; line-height: 1.35; }
 .na { white-space: nowrap; font-family: var(--font-mono); font-size: 12px; color: var(--ink-muted); border: 1px dashed rgba(159, 176, 195, 0.4); border-radius: 4px; padding: 1px 6px; }

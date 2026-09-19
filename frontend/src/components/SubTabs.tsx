@@ -27,7 +27,7 @@ export default function SubTabs({ label, tabs, roles }: { label: string; tabs: T
       <div className="subtabs-inner">
         <span className="label mr-2 hidden sm:inline">{label}</span>
         {tabs.filter((t) => !t.minor).map(item)}
-        {minor.length > 0 && <span className="ml-auto flex items-center gap-1"><span className="label mr-1 hidden lg:inline">Supporting tools</span>{minor.map(item)}</span>}
+        {minor.length > 0 && <span className="ml-auto flex items-center gap-1"><span className="label mr-1 hidden lg:inline">Advanced</span>{minor.map(item)}</span>}
       </div>
     </nav>
   );
