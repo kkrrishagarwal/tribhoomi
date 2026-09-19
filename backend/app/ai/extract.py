@@ -48,10 +48,11 @@ GEMINI_API_KEY = next((t for t in (clean_secret(os.getenv(k)) for k in ("GEMINI_
 GEMINI_MODEL = clean_secret(os.getenv("GEMINI_MODEL")) or "gemini-3.8-flash"
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/interactions"
 GEMINI_PROMPT = (
-    "This is an aerial / satellite photo. Give the segmentation masks for every building roof (houses, apartment blocks, "
-    "towers, sheds). Ignore roads, trees, vehicles, fields and water.\n"
-    "Output a JSON list of segmentation masks where each entry contains the 2D bounding box in the key \"box_2d\", "
-    "the segmentation mask in key \"mask\", and the text label in the key \"label\". Use the label \"building\"."
+    "This is an aerial / satellite photo looking straight down. Find every separate building roof (houses, apartment blocks, "
+    "towers, sheds). Ignore roads, flyovers, trees, vehicles, sports courts, fields and water.\n"
+    "For each building return: \"box_2d\" = [ymin, xmin, ymax, xmax]; \"outline\" = the roof's outline as 4 to 12 corner "
+    "points in order around the roof, each {\"x\": ..., \"y\": ...}; \"label\" = \"building\". "
+    "All coordinates are integers normalised to 0-1000 (x across, y down). One entry per building; do not merge neighbours."
 )
 BUILDING_LABELS = ("building", "house", "skyscraper")
 
@@ -129,15 +130,14 @@ def remote_mask(image: Image.Image) -> tuple[np.ndarray, int]:
     return masks_to_building_mask(payload, image.size), round((time.perf_counter() - t0) * 1000)
 
 
-def gemini_mask(image: Image.Image) -> tuple[np.ndarray, int]:
-    """Ask Gemini for building outlines (polygons, 0-1000 normalised) and rasterise them into a mask."""
+def gemini_detect(image: Image.Image) -> tuple[list, int]:
+    """Ask Gemini for one outline per building roof (coordinates normalised to 0-1000). Returns the raw items and the time taken."""
     small = image.convert("RGB"); small.thumbnail((1024, 1024))   # outlines are normalised, so a smaller upload loses nothing
     buf = io.BytesIO(); small.save(buf, format="JPEG", quality=90)
-    item = {"type": "object", "required": ["box_2d", "mask", "label"], "properties": {
-        "box_2d": {"type": "array", "items": {"type": "integer"}},
-        "mask": {"type": "array", "items": {"type": "array", "items": {"type": "integer"}}},
-        "label": {"type": "string"}}}
-    body = {"model": GEMINI_MODEL, "store": False, "generation_config": {"thinking_level": "minimal"},
+    point = {"type": "object", "required": ["x", "y"], "properties": {"x": {"type": "integer"}, "y": {"type": "integer"}}}
+    item = {"type": "object", "required": ["box_2d", "outline", "label"], "properties": {
+        "box_2d": {"type": "array", "items": {"type": "integer"}}, "outline": {"type": "array", "items": point}, "label": {"type": "string"}}}
+    body = {"model": GEMINI_MODEL, "store": False, "generation_config": {"thinking_level": "low"},   # the docs suggest "minimal", but the live model only accepts low / medium / high
             "input": [{"type": "text", "text": GEMINI_PROMPT}, {"type": "image", "data": base64.b64encode(buf.getvalue()).decode(), "mime_type": "image/jpeg"}],
             "response_format": {"type": "text", "mime_type": "application/json",
                                 "schema": {"type": "object", "required": ["boxes"], "properties": {"boxes": {"type": "array", "items": item}}}}}
@@ -148,8 +148,7 @@ def gemini_mask(image: Image.Image) -> tuple[np.ndarray, int]:
             payload = json.loads(r.read().decode())
     except urllib.error.HTTPError as e:
         raise RuntimeError(gemini_error(e.code, e.read().decode(errors="replace"))) from None
-    items = gemini_items(payload)
-    return gemini_polygons_to_mask(items, image.size), round((time.perf_counter() - t0) * 1000)
+    return gemini_items(payload), round((time.perf_counter() - t0) * 1000)
 
 
 def gemini_error(code: int, body: str) -> str:
@@ -181,20 +180,49 @@ def gemini_items(payload: dict) -> list:
     raise RuntimeError("Gemini answered, but not with the outline list that was asked for. Try again.")
 
 
-def gemini_polygons_to_mask(items: list, size: tuple[int, int]) -> np.ndarray:
-    """Rasterise outlines given as [x, y] points normalised to 0-1000 (box_2d = [ymin, xmin, ymax, xmax] as a fallback). Pure; unit-tested."""
-    from PIL import ImageDraw
+def gemini_footprints(items: list, size: tuple[int, int], min_area_px: float = 150):
+    """
+    One shapely polygon per building, in image pixels. Pure; unit-tested.
+    The live model does not always follow the documented format, so every shape seen so far is accepted:
+    outline points as {"x", "y"} objects or [x, y] pairs, a "mask" made of [ymin, xmin, ymax, xmax] sub-boxes,
+    and finally the bounding box alone (a fair footprint for a roof seen from above).
+    """
+    from shapely.geometry import Polygon
     w, h = size
-    canvas = Image.new("L", (w, h), 0)
-    draw = ImageDraw.Draw(canvas)
+    sx, sy = w / 1000, h / 1000
+    rect = lambda b: box(b[1] * sx, b[0] * sy, b[3] * sx, b[2] * sy)   # noqa: E731  [ymin, xmin, ymax, xmax]
+    out = []
     for it in items:
-        pts = [(p[0] / 1000 * w, p[1] / 1000 * h) for p in it.get("mask") or [] if isinstance(p, (list, tuple)) and len(p) >= 2]
-        box = it.get("box_2d") or []
+        if any(bad in str(it.get("label", "")).lower() for bad in ("road", "tree", "car", "court", "field")):
+            continue
+        raw = it.get("outline") or it.get("mask") or []
+        pts = [(p["x"] * sx, p["y"] * sy) for p in raw if isinstance(p, dict) and "x" in p and "y" in p]
+        pts += [(p[0] * sx, p[1] * sy) for p in raw if isinstance(p, (list, tuple)) and len(p) == 2]
+        boxes = [rect(p) for p in raw if isinstance(p, (list, tuple)) and len(p) == 4]
+        shape = None
         if len(pts) >= 3:
-            draw.polygon(pts, fill=255)
-        elif len(box) == 4:   # no usable outline: the bounding box is still a fair footprint for a roof seen from above
-            y0, x0, y1, x1 = box
-            draw.rectangle([x0 / 1000 * w, y0 / 1000 * h, x1 / 1000 * w, y1 / 1000 * h], fill=255)
+            shape = Polygon(pts).buffer(0)          # buffer(0) repairs a self-crossing outline
+        elif boxes:
+            shape = unary_union(boxes)
+        if (shape is None or shape.is_empty) and len(it.get("box_2d") or []) == 4:
+            shape = rect(it["box_2d"])
+        if shape is None or shape.is_empty:
+            continue
+        if shape.geom_type != "Polygon":            # pieces of one building: keep them as one footprint
+            shape = shape.convex_hull if shape.geom_type == "MultiPolygon" else shape
+        shape = shape.intersection(box(0, 0, w, h))
+        if shape.geom_type == "Polygon" and shape.area >= min_area_px:
+            out.append(shape)
+    out.sort(key=lambda p: -p.area)
+    return out[:40]
+
+
+def footprints_to_mask(polys: list, size: tuple[int, int]) -> np.ndarray:
+    from PIL import ImageDraw
+    canvas = Image.new("L", size, 0)
+    draw = ImageDraw.Draw(canvas)
+    for p in polys:
+        draw.polygon([(x, y) for x, y in p.exterior.coords], fill=255)
     return np.array(canvas) > 127
 
 
@@ -214,8 +242,9 @@ def masks_to_building_mask(segments: list, size: tuple[int, int]) -> np.ndarray:
 def run_extraction(image: Image.Image, m_per_px: float = SAMPLE_M_PER_PX) -> dict:
     image = image.convert("RGB")
     if mode() == "gemini":
-        mask, infer_ms = gemini_mask(image)
-        return _package(image, mask, infer_ms, m_per_px, source=f"Google Gemini ({GEMINI_MODEL})")
+        items, infer_ms = gemini_detect(image)
+        polys = gemini_footprints(items, image.size)
+        return _package(image, footprints_to_mask(polys, image.size), infer_ms, m_per_px, source=f"Google Gemini ({GEMINI_MODEL})", polygons=polys)
     if mode() == "remote":
         mask, infer_ms = remote_mask(image)
         return _package(image, mask, infer_ms, m_per_px, source="Hugging Face Inference API (remote)")
@@ -235,10 +264,11 @@ def run_extraction(image: Image.Image, m_per_px: float = SAMPLE_M_PER_PX) -> dic
     return _package(image, mask, infer_ms, m_per_px, source="local PyTorch")
 
 
-def _package(image: Image.Image, mask: np.ndarray, infer_ms: int, m_per_px: float, source: str) -> dict:
+def _package(image: Image.Image, mask: np.ndarray, infer_ms: int, m_per_px: float, source: str, polygons: list | None = None) -> dict:
     coverage = float(mask.mean())
 
-    polygons = vectorise(mask, cell=8)
+    # Gemini already gives one outline per building; a segmentation mask has to be traced into polygons first
+    polygons = vectorise(mask, cell=8) if polygons is None else polygons
     features = []
     for i, poly in enumerate(polygons, 1):
         area_px = poly.area

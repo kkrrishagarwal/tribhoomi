@@ -5,14 +5,14 @@ import numpy as np
 import pytest
 
 from app.ai import extract
-from app.ai.extract import gemini_error, gemini_items, gemini_polygons_to_mask, vectorise
+from app.ai.extract import footprints_to_mask, gemini_error, gemini_footprints, gemini_items
 
 
 def _response(text: str, status: str = "completed") -> dict:
     return {"id": "x", "status": status, "steps": [{"type": "thought", "content": []}, {"type": "model_output", "content": [{"type": "text", "text": text}]}]}
 
 
-SQUARE = {"box_2d": [100, 100, 400, 400], "label": "building", "mask": [[100, 100], [400, 100], [400, 400], [100, 400]]}
+SQUARE = {"box_2d": [100, 100, 400, 400], "label": "building", "outline": [{"x": 100, "y": 100}, {"x": 400, "y": 100}, {"x": 400, "y": 400}, {"x": 100, "y": 400}]}
 
 
 def test_items_are_read_from_the_model_output_step():
@@ -29,20 +29,36 @@ def test_a_non_json_answer_or_unfinished_request_is_a_clear_error():
         gemini_items(_response("", status="failed"))
 
 
-def test_polygons_are_scaled_from_0_1000_to_the_image_and_vectorised():
+def test_outlines_are_scaled_to_the_image_and_each_building_stays_separate():
     w, h = 200, 100   # not square, so an x/y mix-up would show
-    tri = {"box_2d": [600, 600, 900, 900], "label": "building", "mask": [[600, 600], [900, 600], [900, 900]]}
-    m = gemini_polygons_to_mask([SQUARE, tri], (w, h))
-    assert m.shape == (h, w)
-    assert m[25, 50] and not m[25, 120]            # inside the square (x 20-80, y 10-40); outside it
-    assert m[70, 170] and not m[85, 130]           # inside the triangle; its empty corner
-    assert abs(m[:50].sum() - 60 * 30) < 200       # square area ~ 60 x 30 px
-    assert len(vectorise(m, cell=4, min_area_px=50)) == 2
+    tri = {"box_2d": [600, 600, 900, 900], "label": "building", "outline": [[600, 600], [900, 600], [900, 900]]}   # [x, y] pairs also accepted
+    touching = {"box_2d": [100, 400, 400, 700], "label": "building", "outline": [{"x": 400, "y": 100}, {"x": 700, "y": 100}, {"x": 700, "y": 400}, {"x": 400, "y": 400}]}
+    polys = gemini_footprints([SQUARE, tri, touching], (w, h), min_area_px=50)
+    assert len(polys) == 3                                   # the square and its touching neighbour are NOT merged
+    sq = next(p for p in polys if p.bounds == (20.0, 10.0, 80.0, 40.0))
+    assert sq.area == 60 * 30
+    m = footprints_to_mask(polys, (w, h))
+    assert m.shape == (h, w) and m[25, 50] and m[70, 170] and not m[85, 130]
 
 
-def test_bounding_box_is_used_when_the_outline_is_missing():
-    m = gemini_polygons_to_mask([{"box_2d": [0, 500, 500, 1000], "label": "building", "mask": []}], (100, 100))   # [ymin, xmin, ymax, xmax]
-    assert m[10, 75] and not m[10, 25] and not m[75, 75]
+# What the live model actually sent on 2026-09-19 when asked for a "mask": lists of [ymin, xmin, ymax, xmax] sub-boxes,
+# not the [x, y] points the documentation describes. Reading them as points drew garbage.
+REAL_SUBBOX_REPLY = [{"box_2d": [170, 269, 501, 396], "mask": [[176, 287, 281, 391], [281, 284, 345, 388], [338, 279, 423, 384], [413, 273, 500, 375]], "label": "building"}, {"box_2d": [390, 448, 668, 696], "mask": [[411, 461, 663, 686], [370, 471, 452, 537], [547, 563, 668, 688]], "label": "building"}, {"box_2d": [599, 390, 779, 561], "mask": [[599, 390, 779, 561]], "label": "building"}]
+
+
+def test_real_reply_with_sub_boxes_is_read_as_boxes_not_points():
+    polys = gemini_footprints(REAL_SUBBOX_REPLY, (512, 512))
+    assert len(polys) == 3
+    first = gemini_footprints(REAL_SUBBOX_REPLY[:1], (512, 512))[0]
+    ymin, xmin, ymax, xmax = REAL_SUBBOX_REPLY[0]["box_2d"]
+    bx0, by0, bx1, by1 = first.bounds
+    assert abs(bx0 - xmin * 0.512) < 12 and abs(by0 - ymin * 0.512) < 12 and abs(bx1 - xmax * 0.512) < 12 and abs(by1 - ymax * 0.512) < 12
+
+
+def test_bounding_box_is_used_when_the_outline_is_missing_and_non_buildings_are_dropped():
+    items = [{"box_2d": [0, 500, 500, 1000], "label": "building", "outline": []}, {"box_2d": [500, 0, 900, 400], "label": "road", "outline": []}]
+    polys = gemini_footprints(items, (100, 100), min_area_px=10)
+    assert len(polys) == 1 and polys[0].bounds == (50.0, 0.0, 100.0, 50.0)     # [ymin, xmin, ymax, xmax]
 
 
 def test_errors_say_what_to_do():
@@ -85,4 +101,5 @@ def test_full_extraction_with_a_faked_gemini_reply(monkeypatch):
     assert sent["body"]["store"] is False and sent["body"]["input"][1]["type"] == "image" and sent["body"]["input"][1]["mime_type"] == "image/jpeg"
     assert out["footprints_found"] == 1 and out["source"].startswith("Google Gemini") and out["model_id"] == extract.GEMINI_MODEL
     area = out["footprints"]["features"][0]["properties"]["area_sqm"]
-    assert 3000 < area < 4200        # 120 px x 120 px at 0.5 m/px = 3600 m2 (vectorise works on an 8 px grid)
+    assert area == 3600              # 120 px x 120 px at 0.5 m/px
+    assert sent["body"]["generation_config"]["thinking_level"] == "low"   # "minimal" (from the docs) is rejected by the live model
