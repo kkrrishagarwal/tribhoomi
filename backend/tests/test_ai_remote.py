@@ -24,3 +24,12 @@ def test_building_masks_are_unioned_and_other_labels_ignored():
     assert m.sum() == a.sum() + b.sum()
     polys = vectorise(m, cell=4, min_area_px=50)
     assert len(polys) == 2
+
+
+def test_pasted_keys_are_cleaned():
+    """The live Cesium key was stored as 'token\\n' and rejected with 401; the same paste would break HF_TOKEN."""
+    from app.ai.extract import clean_secret
+    assert clean_secret("hf_abc123\n") == "hf_abc123"
+    assert clean_secret('  "hf_abc123"  ') == "hf_abc123"
+    assert clean_secret("'hf_abc123'\r\n") == "hf_abc123"
+    assert clean_secret(None) == "" and clean_secret("   ") == ""

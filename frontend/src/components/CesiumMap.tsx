@@ -55,7 +55,8 @@ export default function CesiumMap(props: Props) {
       try { Cesium = await loadCesium(); } catch (e: any) { propsRef.current.onStatus({ ready: false, token: false, terrain: false, osmBuildings: false, error: String(e.message ?? e) }); return; }
       if (destroyed || !containerRef.current) return;
       cesiumRef.current = Cesium;
-      const token = process.env.NEXT_PUBLIC_CESIUM_TOKEN || "";
+      // trim: a key pasted into a hosting dashboard with a trailing line break is rejected by Cesium ion as INVALID_TOKEN
+      const token = (process.env.NEXT_PUBLIC_CESIUM_TOKEN || "").trim().replace(/^["']|["']$/g, "");
       // Older Intel GPUs on Mesa (e.g. HD 2500/4000) fail to compile some of Cesium's WebGL 2 shaders
       // (the sun glow shader is the first to go). Detect them and start in the conservative mode.
       const renderer = (() => { try { const c = document.createElement("canvas"); const g: any = c.getContext("webgl2") || c.getContext("webgl"); const d = g?.getExtension("WEBGL_debug_renderer_info"); return d ? String(g.getParameter(d.UNMASKED_RENDERER_WEBGL)) : ""; } catch { return ""; } })();

@@ -18,3 +18,5 @@ services:
         sync: false     # paste your Cesium ion token in the Render dashboard
       - key: NEXT_PUBLIC_PUBLIC_URL
         sync: false     # https://<service-name>.onrender.com
+      - key: HF_TOKEN
+        sync: false     # optional: a free Hugging Face "read" token turns on the AI footprint page (remote inference)

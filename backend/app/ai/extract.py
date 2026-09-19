@@ -35,7 +35,13 @@ _load_error: str | None = None
 SAMPLE_M_PER_PX = 0.524
 
 
-HF_TOKEN = os.getenv("HF_TOKEN", "")
+def clean_secret(value: str | None) -> str:
+    """A key pasted into a hosting dashboard often arrives with a trailing newline, spaces or quotes; any of those makes the provider reject it."""
+    return (value or "").strip().strip("\"'").strip()
+
+
+# HF_TOKEN is the documented name; the others are what Hugging Face's own tools use, so accept them too.
+HF_TOKEN = next((t for t in (clean_secret(os.getenv(k)) for k in ("HF_TOKEN", "HUGGINGFACEHUB_API_TOKEN", "HUGGING_FACE_HUB_TOKEN", "HF_API_TOKEN")) if t), "")
 BUILDING_LABELS = ("building", "house", "skyscraper")
 
 
