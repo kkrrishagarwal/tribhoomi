@@ -52,11 +52,17 @@ slash) plus `NEXT_PUBLIC_CESIUM_TOKEN` and `NEXT_PUBLIC_PUBLIC_URL` (= the Verce
 
 ## AI footprint page on a small host
 
-The free Render tier cannot hold PyTorch, so the AI page reports "Disabled on this server". To
-enable it without PyTorch, add an environment variable `HF_TOKEN` (a free Hugging Face access
-token, read scope) to the service and redeploy: the backend then sends the image to the
-Hugging Face Inference API and vectorises the returned building masks. The first call can take
-~20 s while the hosted model warms up. Locally the model always runs on CPU in ~3 s.
+The free Render tier cannot hold PyTorch, so without a key the AI page reports "Disabled on this
+server". Add ONE environment variable to the service and redeploy:
+
+- **`GEMINI_API_KEY`** (recommended) - a free key from https://aistudio.google.com/apikey. The backend
+  sends the aerial image to Google Gemini, which returns building outlines; Tribhoomi turns them into
+  footprints with areas. Optional `GEMINI_MODEL` (default `gemini-3.8-flash`) if Google renames models.
+- `HF_TOKEN` - a Hugging Face "read" token; used only when no Gemini key is set.
+
+Paste the key with no quotes and no trailing Enter (the app trims both anyway). Order of preference:
+local PyTorch, then Gemini, then Hugging Face. Locally the SegFormer model runs on CPU in ~3 s.
+Note: a general vision model's outlines can vary slightly between runs, unlike the fixed SegFormer model.
 
 ## Why not Vercel for the backend?
 

@@ -39,7 +39,9 @@ export default function AiPage() {
       <div>
         <h1 className="text-xl font-semibold">{t("h.ai")}</h1>
         <p className="text-sm text-slate-600">
-          A pretrained semantic-segmentation model (<span className="font-mono">{status?.model_id ?? "…"}</span>, Hugging Face, trained on ADE20K) runs on CPU over an aerial image. Pixels classed as building / house / skyscraper are kept and vectorised into footprint polygons — the surface geometry a 3D ULPIN hangs from. No training was done; this is real inference on a real image (Esri World Imagery, Sector 18, Noida).
+          {status?.mode === "gemini"
+            ? <>The aerial image is sent to Google Gemini (<span className="font-mono">{status.model_id}</span>), which returns the outline of every building roof it finds. Tribhoomi turns those outlines into footprint polygons with areas, ready to become candidate parcels.</>
+            : <>A pretrained semantic-segmentation model (<span className="font-mono">{status?.model_id ?? "…"}</span>, Hugging Face, trained on ADE20K) runs on CPU over an aerial image. Pixels classed as building / house / skyscraper are kept and vectorised into footprint polygons — the surface geometry a 3D ULPIN hangs from. No training was done; this is real inference on a real image (Esri World Imagery, Sector 18, Noida).</>}
         </p>
       </div>
 
@@ -75,10 +77,10 @@ export default function AiPage() {
           <div>
             <div className="label">Model status</div>
             <div className={`mt-1 text-xs ${status?.mode === "off" ? "text-amber-700" : status?.loaded ? "text-emerald-700" : "text-slate-500"}`}>
-              {status?.error ? `Error: ${status.error}` : status?.mode === "off" ? "Disabled on this server" : status?.mode === "remote" ? "Remote inference (Hugging Face API)" : status?.loaded ? "Loaded in memory" : "Will load on first run (a few seconds)"}
+              {status?.error ? `Error: ${status.error}` : status?.mode === "off" ? "Disabled on this server" : status?.mode === "gemini" ? "Remote inference (Google Gemini)" : status?.mode === "remote" ? "Remote inference (Hugging Face API)" : status?.loaded ? "Loaded in memory" : "Will load on first run (a few seconds)"}
             </div>
             {status?.explanation && <div className="mt-1 text-xs text-slate-500">{status.explanation}</div>}
-            {status?.mode === "off" && <div className="mt-2 rounded-lg border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900">This is expected on the free hosting tier (512 MB RAM). The same model runs locally in about 3 seconds, or remotely by adding an <span className="font-mono">HF_TOKEN</span> environment variable on the host.</div>}
+            {status?.mode === "off" && <div className="mt-2 rounded-lg border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900">This is expected on the free hosting tier (512 MB RAM). The same model runs locally in about 3 seconds, or remotely by adding a free <span className="font-mono">GEMINI_API_KEY</span> environment variable on the host.</div>}
           </div>
           <label className="block text-xs">
             <span className="label">Optional: your own aerial image</span>
@@ -87,7 +89,7 @@ export default function AiPage() {
           <button onClick={run} disabled={running || status?.mode === "off"} className="btn-accent w-full justify-center">
             {running ? "Running segmentation…" : "Run footprint extraction"}
           </button>
-          {running && <ScanLoader text="SegFormer · segmenting" className="p-1" />}
+          {running && <ScanLoader text={status?.mode === "gemini" ? "Gemini · finding buildings" : "SegFormer · segmenting"} className="p-1" />}
           {error && <p className="text-xs text-red-600">{error}</p>}
           {result && (
             <>
