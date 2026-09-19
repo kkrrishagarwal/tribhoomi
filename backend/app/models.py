@@ -313,3 +313,24 @@ class Watch(Base):
     user: Mapped[str] = mapped_column(String(120), index=True)
     unit_id: Mapped[int] = mapped_column(ForeignKey("units.id"), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime)
+
+
+class AreaInfrastructure(Base):
+    """
+    Publicly announced infrastructure for the Area Insights panel. Same isolation rule as
+    MarketContextProject: no foreign keys, never read by the ULPIN engine, ownership or integrity code.
+    There is deliberately NO score, rating or desirability field: the panel lists facts and sources only.
+    Every row must be traceable to `data_source`; anything unconfirmed is written as such in the text.
+    """
+    __tablename__ = "area_infrastructure"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(160))
+    locality: Mapped[str] = mapped_column(String(120))
+    city: Mapped[str] = mapped_column(String(80))                  # one or more cities, " / " separated
+    project_type: Mapped[str] = mapped_column(String(20))          # metro | expressway | expansion | other
+    description: Mapped[str] = mapped_column(Text)
+    announced_status: Mapped[str] = mapped_column(String(20))      # planned | under_construction | completed
+    expected_completion: Mapped[str] = mapped_column(String(80))
+    data_source: Mapped[str] = mapped_column(String(200))
+    data_date: Mapped[str] = mapped_column(String(10))

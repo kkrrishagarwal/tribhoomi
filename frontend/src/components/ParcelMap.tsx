@@ -73,10 +73,11 @@ function DrawLayer({ drawing, points, setPoints, onFinish }: { drawing: boolean;
   );
 }
 
-export default function ParcelMap({ features, selected, onSelect, drawing = false, onDrawComplete, candidates = [], handleRef, market = [] }: {
+export default function ParcelMap({ features, selected, onSelect, drawing = false, onDrawComplete, candidates = [], handleRef, market = [], onAreaInsights }: {
   features: ParcelFeature[]; selected: ParcelFeature | null; onSelect: (f: ParcelFeature) => void;
   drawing?: boolean; onDrawComplete?: (ring: number[][]) => void; candidates?: GeoPolygon[]; handleRef?: MutableRefObject<LeafletHandle | null>;
   market?: MarketFeature[];
+  onAreaInsights?: (area: { city: string; locality: string }) => void;
 }) {
   const [points, setPoints] = useState<[number, number][]>([]);
   useEffect(() => { if (!drawing) setPoints([]); }, [drawing]);
@@ -106,7 +107,7 @@ export default function ParcelMap({ features, selected, onSelect, drawing = fals
       {market.map((m) => (
         <Marker key={`mk${m.id}`} position={[m.geometry.coordinates[1], m.geometry.coordinates[0]]} icon={marketIcon} zIndexOffset={-100}>
           <Tooltip direction="top" offset={[0, -6]} opacity={0.9}>{m.properties.project_name}</Tooltip>
-          <Popup maxWidth={300}><MarketInfo p={m.properties} compact /></Popup>
+          <Popup maxWidth={300}><MarketInfo p={m.properties} compact />{onAreaInsights && <button type="button" onClick={() => onAreaInsights({ city: m.properties.city, locality: m.properties.locality })} className="btn-ghost mt-2 w-full justify-center !py-1 text-xs">Area insights for {m.properties.locality}</button>}</Popup>
         </Marker>
       ))}
       {/* parcels are kilometres apart (Greater Noida / Noida / Ghaziabad): a labelled marker keeps each one findable when zoomed out */}

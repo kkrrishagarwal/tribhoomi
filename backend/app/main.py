@@ -11,8 +11,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from . import errors
 from .config import CORS_ORIGINS, DATABASE_URL
 from .db import Base, SessionLocal, engine
-from .models import Parcel
-from .routers import ai, analysis, dashboard, integrity, layouts, lifecycle, market, parcels, ulpin, units, validate
+from .models import AreaInfrastructure, Parcel
+from .routers import ai, analysis, insights, dashboard, integrity, layouts, lifecycle, market, parcels, ulpin, units, validate
 
 
 @asynccontextmanager
@@ -23,6 +23,9 @@ async def lifespan(app: FastAPI):
         if db.query(Parcel).count() == 0:
             from seed.seed import run
             run(reset=False)
+        elif db.query(AreaInfrastructure).count() == 0:   # database seeded before this table existed
+            from seed.seed import seed_area_infrastructure
+            seed_area_infrastructure(db); db.commit()
     yield
 
 
@@ -36,7 +39,7 @@ app = FastAPI(
 app.add_middleware(CORSMiddleware, allow_origins=["*"] if "*" in CORS_ORIGINS else CORS_ORIGINS, allow_methods=["*"], allow_headers=["*"])
 errors.install(app)
 
-for r in (parcels, units, ulpin, validate, dashboard, ai, integrity, layouts, market, lifecycle, analysis):
+for r in (parcels, units, ulpin, validate, dashboard, ai, integrity, layouts, market, lifecycle, analysis, insights):
     app.include_router(r.router)
 
 

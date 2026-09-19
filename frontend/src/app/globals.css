@@ -92,6 +92,10 @@ code, kbd, pre, .font-mono { font-family: var(--font-mono); }
 /* grid texture behind maps */
 .grid-bg { background-image: linear-gradient(rgba(34, 232, 200, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(34, 232, 200, 0.05) 1px, transparent 1px); background-size: 28px 28px; }
 
+/* Area Insights: the disclaimer has the weight of the demo badge, and "not publicly available" is a first-class value */
+.insight-disclaimer { border: 1px solid rgba(251, 191, 36, 0.5); background: rgba(251, 191, 36, 0.08); color: #fcd34d; border-radius: 6px; padding: 6px 10px; font-size: 13px; line-height: 1.35; }
+.na { white-space: nowrap; font-family: var(--font-mono); font-size: 12px; color: var(--ink-muted); border: 1px dashed rgba(159, 176, 195, 0.4); border-radius: 4px; padding: 1px 6px; }
+
 /* progressive disclosure: readable first, raw data on request */
 .tech { margin-top: 6px; }
 .tech > summary { cursor: pointer; font-size: 12px; color: var(--ink-dim); text-decoration: underline dotted; text-underline-offset: 3px; list-style: none; }

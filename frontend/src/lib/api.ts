@@ -198,6 +198,16 @@ export type MarketProject = {
 export type MarketFeature = { type: "Feature"; id: number; geometry: { type: "Point"; coordinates: [number, number] }; properties: MarketProject };
 export type MarketContext = { type: "FeatureCollection"; features: MarketFeature[]; unmapped: { id: number; properties: MarketProject }[]; summary: { projects: number; mapped: number; by_confidence: Record<string, number>; disclaimer: string } };
 
+// ---------------- area insights: sourced facts only, never a score or a verdict
+export type InfraItem = { name: string; locality: string; city: string; project_type: "metro" | "expressway" | "expansion" | "other"; description: string; announced_status: "planned" | "under_construction" | "completed"; expected_completion: string; data_source: string; data_date: string };
+export type AreaRef = { city: string; locality: string; known_projects: number };
+export type AreaInsight = {
+  city: string; locality: string; disclaimer: string;
+  price_per_sqft: { value: number | null; text: string; note: string };
+  inventory: { known_projects: number; known_units: number | null; projects_with_unit_count: number; unsold_units: { value: number | null; text: string }; projects: { project_name: string; builder_name: string; total_units: string; status: string; confidence: string }[]; sources: string[] };
+  infrastructure: InfraItem[];
+};
+
 // ---------------- property lifecycle (builder -> validation -> authority -> passport)
 export type VerificationStatus = "draft" | "pending" | "verified" | "rejected" | "conflict";
 export type Check = { key: string; ok: boolean; text: string; why?: string; severity?: "error" | "warning" };
@@ -348,6 +358,8 @@ export const api = {
   validate: (parcelId?: number | string) => get<ValidationResult>(parcelId ? `/api/validate/${parcelId}` : "/api/validate"),
   dashboard: () => get<Dashboard>("/api/dashboard"),
   marketContext: () => get<MarketContext>("/api/market-context"),
+  areas: () => get<{ areas: AreaRef[]; disclaimer: string }>("/api/area-insights"),
+  areaInsight: (city: string, locality: string) => get<AreaInsight>(`/api/area-insights?city=${encodeURIComponent(city)}&locality=${encodeURIComponent(locality)}`),
   parse: (ulpin: string) => get<any>(`/api/ulpin/parse?ulpin=${encodeURIComponent(ulpin)}`),
   generate: (body: Record<string, number>) => send<any>("POST", "/api/ulpin/generate", body),
   identities: () => get<{ builders: string[]; investors: { email: string; name: string }[]; admin: { name: string; user: string } }>("/api/identities"),

@@ -17,7 +17,7 @@ import csv
 
 from app.config import SEED_FILE
 from app.db import Base, SessionLocal, engine
-from app.models import Floor, MarketContextProject, Parcel, Unit
+from app.models import AreaInfrastructure, Floor, MarketContextProject, Parcel, Unit
 from app.services import audit, integrity
 from app.services.layout import create_layout
 from app.ulpin import ParcelKey
@@ -187,6 +187,17 @@ def seed_market_context(db) -> int:
     return len(rows)
 
 
+def seed_area_infrastructure(db) -> int:
+    """Publicly announced NCR infrastructure from seed/area_infrastructure.csv. Informational, never linked to units."""
+    path = SEED_FILE.parent / "area_infrastructure.csv"
+    with path.open(newline="", encoding="utf-8") as fh:
+        rows = list(csv.DictReader(fh))
+    for r in rows:
+        db.add(AreaInfrastructure(**{k: r[k].strip() for k in ("name", "locality", "city", "project_type", "description", "announced_status", "expected_completion", "data_source", "data_date")}))
+    db.flush()
+    return len(rows)
+
+
 def run(reset: bool = True) -> None:
     if reset:
         Base.metadata.drop_all(engine)
@@ -200,6 +211,7 @@ def run(reset: bool = True) -> None:
         seed_integrity_scenarios(db)
         seed_lifecycle_states(db)
         n = seed_market_context(db)
+        seed_area_infrastructure(db)
         db.commit()
         print("units:", db.query(Unit).count(), "floors:", db.query(Floor).count(), "market-context projects:", n)
 
