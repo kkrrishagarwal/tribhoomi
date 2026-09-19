@@ -281,10 +281,13 @@ async function attempt(path: string, init: RequestInit, timeoutMs: number): Prom
   } finally { clearTimeout(timer); }
 }
 
-/** A proxy in front of a dead or sleeping backend answers 502/503/504, or a 500 that is not our JSON. */
+/**
+ * A proxy in front of a dead or sleeping backend answers 500/502/503/504 WITHOUT our JSON body.
+ * Our own API also uses 503 (e.g. "AI is not available: quota used up") and always sends a `detail`:
+ * that is an answer to show, not a server that is down.
+ */
 async function unreachable(r: Response): Promise<boolean> {
-  if ([502, 503, 504].includes(r.status)) return true;
-  if (r.status !== 500) return false;
+  if (![500, 502, 503, 504].includes(r.status)) return false;
   try { const j = await r.clone().json(); return typeof j?.detail === "undefined"; } catch { return true; }
 }
 
