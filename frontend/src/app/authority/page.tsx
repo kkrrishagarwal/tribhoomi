@@ -1,4 +1,5 @@
 "use client";
+import RoleGuide from "@/components/RoleGuide";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api, type PropertyUnit, type QueueRow } from "@/lib/api";
@@ -23,6 +24,7 @@ function Inner() {
   return (
     <div className="page">
       <div className="flex flex-wrap items-end justify-between gap-3"><div><div className="label">Property verification command center</div><h1 className="h1">{d.authority === "admin" ? "Authority Demo User" : d.authority}</h1></div><DemoBadge /></div>
+      <RoleGuide on={["admin"]} />
       <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-5">
         {[["Pending registrations", c.pending, "warn", "/authority/pending"], ["Conflicts", c.conflicts, "bad", "/authority/conflicts"], ["Modification requests", c.modification_requests, "warn", "/authority/disputes"], ["Active disputes", c.disputes, "bad", "/authority/disputes"], ["Recently verified", c.verified, "ok", "/dashboard"]].map(([l, v, t, h]) => (
           <Link key={l as string} href={h as string} className="card stat hover:border-accent"><div className="label">{l}</div><div className={`n ${t}`}>{v}</div></Link>

@@ -1,4 +1,5 @@
 "use client";
+import RoleGuide from "@/components/RoleGuide";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
@@ -61,7 +62,8 @@ export default function DemoStory({ core, full, more }: { core: Step[]; full: St
       <h1 className="h1">See Tribhoomi in 2 minutes</h1>
       <p className="lead max-w-3xl">Follow one property, flat 3-C, from registration to verification, change detection and authority review.</p>
       <blockquote className="mt-3 max-w-3xl border-l-2 border-[var(--line-strong)] pl-3 text-ink">Tribhoomi does not just record a property. It tracks how its spatial identity changes.</blockquote>
-      <ProductLoop className="mt-4" />
+      <RoleGuide on={["public", "investor", "owner", "builder", "admin"]} alwaysOpen />
+      <ProductLoop className="mt-6" />
       <div className="card mt-4 flex flex-wrap items-center gap-2 p-4">
         <button onClick={() => run("setup")} disabled={busy} className={setup ? "btn-ghost" : "btn-accent"}>{busy ? "Creating…" : setup ? "Reset the scenario" : "Create the demo scenario"}</button>
         {setup && <Link href={link(core[0].href)} className="btn-accent">Start: open flat 3-C →</Link>}

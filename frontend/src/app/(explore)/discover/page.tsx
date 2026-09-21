@@ -1,4 +1,5 @@
 "use client";
+import RoleGuide from "@/components/RoleGuide";
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -19,6 +20,7 @@ function Inner() {
         <input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Enter" && search()} placeholder="e.g. Tribhoomi Heights, Tower A, 8-C or TRB-TA1-F08-U03" className="flex-1 rounded-lg border px-3 py-2" />
         <button onClick={() => search()} className="btn-accent">Search</button>
       </div>
+      <div className="mx-auto max-w-3xl"><RoleGuide on={["public", "investor"]} /></div>
       {projects.length > 0 && <div className="mx-auto mt-3 flex max-w-3xl flex-wrap gap-1.5 text-sm">{projects.slice(0, 12).map((p) => <button key={p.id} onClick={() => { setQ(p.name); search(p.name); }} className="btn-ghost !py-1">{p.name} <span className="text-slate-500">· {p.city}</span></button>)}</div>}
       {busy && <ScanLoader text="Searching registry" />}
       {rows && !busy && (

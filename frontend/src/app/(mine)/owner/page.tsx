@@ -1,4 +1,5 @@
 "use client";
+import RoleGuide from "@/components/RoleGuide";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api, type Alert, type PropertyPage } from "@/lib/api";
@@ -18,6 +19,7 @@ function Inner() {
   return (
     <div className="page">
       <h1 className="h1">My property</h1><p className="lead">{s.name} · {rows.length} registered propert{rows.length === 1 ? "y" : "ies"}. Anything that changes shows up here and on the Changes page.</p>
+      <RoleGuide on={["owner"]} />
       {alerts.length > 0 && (
         <div className="card mt-4 p-4"><div className="flex items-center justify-between"><div className="font-semibold">Property change alerts</div><div className="text-xs text-slate-500">Tribhoomi application notifications, not government alerts</div></div>
           <ul className="mt-2 space-y-2">{alerts.slice(0, 6).map((a, i) => <li key={i} className="rounded-lg bg-slate-50 p-3 text-sm"><div className="flex flex-wrap items-center gap-2"><span className="font-medium">{a.building} — {a.label}</span><span className="font-mono text-xs text-slate-500">{a.at.slice(0, 16).replace("T", " ")}</span></div><div>{a.event}{a.area && <> · area {a.area.before_sqft.toLocaleString()} → {a.area.after_sqft.toLocaleString()} sq ft</>}{a.pending_modification && <span className="ml-1 text-amber-300">· pending authority review</span>}</div><Link href={`/property/${a.tpid}`} className="text-accent underline">View change</Link></li>)}</ul></div>

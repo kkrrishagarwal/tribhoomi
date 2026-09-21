@@ -1,4 +1,5 @@
 "use client";
+import RoleGuide from "@/components/RoleGuide";
 import LoadError from "@/components/LoadError";
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -26,6 +27,7 @@ function Inner() {
         <div><div className="label">Builder dashboard</div><h1 className="h1">{s.name}</h1></div>
         <div className="flex items-center gap-2"><DemoBadge /><Link href="/builder/projects/new" className="btn-accent">+ Create new project</Link></div>
       </div>
+      <RoleGuide on={["builder"]} />
       <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-5">
         {[["Projects", c.projects, ""], ["Buildings", c.buildings, ""], ["Total units", c.units, ""], ["Pending approval", c.pending, "warn"], ["Validation issues", c.issues, "bad"]].map(([l, v, t]) => (
           <div key={l as string} className="card stat"><div className="label">{l}</div><div className={`n ${t}`}>{v}</div></div>
