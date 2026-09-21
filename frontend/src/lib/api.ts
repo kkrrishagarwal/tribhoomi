@@ -198,6 +198,16 @@ export type MarketProject = {
 export type MarketFeature = { type: "Feature"; id: number; geometry: { type: "Point"; coordinates: [number, number] }; properties: MarketProject };
 export type MarketContext = { type: "FeatureCollection"; features: MarketFeature[]; unmapped: { id: number; properties: MarketProject }[]; summary: { projects: number; mapped: number; by_confidence: Record<string, number>; disclaimer: string } };
 
+// ---------------- who can sign in (prototype identities)
+export type DemoIdentity = { user: string; name: string; shows: string };
+export type Identities = {
+  builders: string[];
+  investors: { email: string; name: string }[];
+  admin: { name: string; user: string };
+  /** one ready-made identity per role, chosen from the seeded data by the backend */
+  demo?: Partial<Record<"public" | "builder" | "investor" | "owner" | "admin", DemoIdentity | null>>;
+};
+
 // ---------------- area insights: sourced facts only, never a score or a verdict
 export type InfraItem = { name: string; locality: string; city: string; project_type: "metro" | "expressway" | "expansion" | "other"; description: string; announced_status: "planned" | "under_construction" | "completed"; expected_completion: string; data_source: string; data_date: string };
 export type AreaRef = { city: string; locality: string; known_projects: number };
@@ -362,7 +372,7 @@ export const api = {
   areaInsight: (city: string, locality: string) => get<AreaInsight>(`/api/area-insights?city=${encodeURIComponent(city)}&locality=${encodeURIComponent(locality)}`),
   parse: (ulpin: string) => get<any>(`/api/ulpin/parse?ulpin=${encodeURIComponent(ulpin)}`),
   generate: (body: Record<string, number>) => send<any>("POST", "/api/ulpin/generate", body),
-  identities: () => get<{ builders: string[]; investors: { email: string; name: string }[]; admin: { name: string; user: string } }>("/api/identities"),
+  identities: () => get<Identities>("/api/identities"),
   // builder
   builderOverview: () => get<{ builder: string; parcels: any[]; editable: UnitRow[]; locked: UnitRow[]; change_requests: ChangeRequest[]; notifications: Notice[] }>("/api/builder/overview"),
   assign: (ulpin: string, body: { owner_name: string; owner_email: string; ownership_type: string }) => send<{ ok: boolean; message: string; unit: UnitRow }>("POST", `/api/builder/units/${ulpin}/assign`, body),

@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { api } from "@/lib/api";
+import { api, type DemoIdentity } from "@/lib/api";
 import { setSession, signOut, type Role } from "@/lib/session";
 import { useSession } from "@/lib/useSession";
 
@@ -25,6 +25,16 @@ const ROLES: { key: RoleKey; role: Role; title: string; can: string; home: strin
 ];
 // Old links and guesses (/signin/admin, ?role=government) all mean the authority card.
 const ALIASES: Record<string, RoleKey> = { admin: "authority", government: "authority", govt: "authority", buyer: "investor", visitor: "public" };
+// the backend names the demo identity for each role (and what it will show). These stand in only
+// until it answers - on a sleeping host that can take a minute - so every role still has one click.
+const API_KEY: Record<RoleKey, "public" | "builder" | "investor" | "owner" | "admin"> = { public: "public", builder: "builder", investor: "investor", owner: "owner", authority: "admin" };
+const FALLBACK: Record<RoleKey, DemoIdentity> = {
+  public: { user: "", name: "Public visitor", shows: "" },
+  builder: { user: "Tribhoomi Developers Pvt Ltd", name: "Tribhoomi Developers Pvt Ltd", shows: "" },
+  investor: { user: "buyer@example.in", name: "Demo Buyer", shows: "" },
+  owner: { user: "rajesh.kumar@example.in", name: "Rajesh Kumar", shows: "" },
+  authority: { user: "admin", name: "DoLR Land Records Officer", shows: "" },
+};
 
 const ICONS: Record<RoleKey, string> = {
   public: "M11 4a7 7 0 1 0 4.2 12.6l4.1 4.1 1.4-1.4-4.1-4.1A7 7 0 0 0 11 4Zm0 2a5 5 0 1 1 0 10 5 5 0 0 1 0-10Z",
@@ -94,6 +104,8 @@ export default function SignIn() {
     router.push(next ?? r.home);
   };
 
+  const demoFor = (key: RoleKey): DemoIdentity => ids?.demo?.[API_KEY[key]] ?? FALLBACK[key];
+
   const choicesFor = (key: RoleKey): Choice[] | null => {
     if (key === "public") return [];
     if (key === "investor") return [{ label: "Demo Buyer · buyer@example.in", user: "buyer@example.in", name: "Demo Buyer" }];
@@ -162,7 +174,7 @@ export default function SignIn() {
             <h2 id="signin-title" className="h2">Choose your role</h2>
             <span className="demo-badge">Demo mode</span>
           </div>
-          <p className="mt-1 text-sm text-ink-muted">Select a role to continue. No password is needed.</p>
+          <p className="mt-1 text-sm text-ink-muted">Pick a role, then one click signs you in as a ready-made demo identity that already has data.</p>
 
           <ul className="mt-4 space-y-2">
             {ROLES.map((r) => {
@@ -181,30 +193,43 @@ export default function SignIn() {
                     <span aria-hidden className={`text-ink-dim transition ${isOpen ? "rotate-90 text-accent" : ""}`}>›</span>
                   </button>
 
-                  {isOpen && (
-                    <div className="animate-panel-in space-y-3 border-t border-[rgba(159,176,195,0.14)] p-3">
-                      {r.key === "public" && <button type="button" disabled={going} onClick={() => go(r, "", "Public visitor")} className="btn-accent w-full justify-center">Continue as a visitor</button>}
-
-                      {choices === null && <p className="text-sm text-ink-muted"><span className="animate-pulse text-accent">●</span> Fetching demo identities from the registry. If the server was asleep this takes up to a minute — you can also continue with your own name below.</p>}
-                      {choices && choices.length > 0 && (
+                  {isOpen && (() => {
+                    const demo = demoFor(r.key);
+                    const others = (choices ?? []).filter((c) => c.user !== demo.user);
+                    const hasMore = choices === null || others.length > 0 || !!r.nameLabel;
+                    return (
+                      <div className="animate-panel-in space-y-3 border-t border-[rgba(159,176,195,0.14)] p-3">
                         <div>
-                          <div className="label">Demo identity with existing data</div>
-                          <div className="mt-2 flex max-h-52 flex-col gap-1.5 overflow-y-auto pr-1">
-                            {choices.map((c) => <button type="button" key={c.user} disabled={going} onClick={() => go(r, c.user, c.name)} className="btn-ghost justify-between text-left"><span className="min-w-0 truncate" title={c.label}>{c.label}</span><span aria-hidden className="text-accent">→</span></button>)}
-                          </div>
+                          <button type="button" disabled={going} onClick={() => go(r, demo.user, demo.name)} className="btn-accent w-full justify-between">
+                            <span className="min-w-0 truncate">Continue as {demo.name}</span><span aria-hidden>→</span>
+                          </button>
+                          <p className="mt-1 text-xs text-ink-muted">Ready-made demo identity{demo.shows ? ` · ${demo.shows}` : ""}. No password.</p>
                         </div>
-                      )}
 
-                      {r.nameLabel && (
-                        <form className="space-y-2" onSubmit={(e) => { e.preventDefault(); go(r, r.key === "builder" ? (name.trim() || "Demo Builders Pvt Ltd") : (email.trim().toLowerCase() || "demo@example.in"), name.trim() || "Demo user"); }}>
-                          <div className="label">Or start fresh</div>
-                          <input aria-label={r.nameLabel} value={name} onChange={(e) => setName(e.target.value)} maxLength={80} className="w-full rounded-lg border px-3 py-2" placeholder={r.placeholder} />
-                          {r.key !== "builder" && <input aria-label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} maxLength={120} className="w-full rounded-lg border px-3 py-2 font-mono text-sm" placeholder="you@example.in" />}
-                          <button type="submit" disabled={going} className="btn-primary w-full justify-center">Continue as {r.title.toLowerCase()}</button>
-                        </form>
-                      )}
-                    </div>
-                  )}
+                        {hasMore && (
+                          <details className="tech">
+                            <summary>Use a different identity</summary>
+                            <div className="mt-2 space-y-3">
+                              {choices === null && <p className="text-sm text-ink-muted"><span className="animate-pulse text-accent">●</span> Fetching the other identities from the registry. If the server was asleep this takes up to a minute.</p>}
+                              {others.length > 0 && (
+                                <div className="flex max-h-52 flex-col gap-1.5 overflow-y-auto pr-1">
+                                  {others.map((c) => <button type="button" key={c.user} disabled={going} onClick={() => go(r, c.user, c.name)} className="btn-ghost justify-between text-left"><span className="min-w-0 truncate" title={c.label}>{c.label}</span><span aria-hidden className="text-accent">→</span></button>)}
+                                </div>
+                              )}
+                              {r.nameLabel && (
+                                <form className="space-y-2" onSubmit={(e) => { e.preventDefault(); go(r, r.key === "builder" ? (name.trim() || "Demo Builders Pvt Ltd") : (email.trim().toLowerCase() || "demo@example.in"), name.trim() || "Demo user"); }}>
+                                  <div className="label">Or start fresh</div>
+                                  <input aria-label={r.nameLabel} value={name} onChange={(e) => setName(e.target.value)} maxLength={80} className="w-full rounded-lg border px-3 py-2" placeholder={r.placeholder} />
+                                  {r.key !== "builder" && <input aria-label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} maxLength={120} className="w-full rounded-lg border px-3 py-2 font-mono text-sm" placeholder="you@example.in" />}
+                                  <button type="submit" disabled={going} className="btn-primary w-full justify-center">Continue as {r.title.toLowerCase()}</button>
+                                </form>
+                              )}
+                            </div>
+                          </details>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </li>
               );
             })}

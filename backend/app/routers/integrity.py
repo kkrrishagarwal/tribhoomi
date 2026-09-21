@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
+from sqlalchemy import func
 from sqlalchemy.orm import Session, selectinload
 
 from ..auth import Actor, current_actor, require_role
@@ -48,6 +49,76 @@ def _unit_row(u: Unit) -> dict:
 
 # ------------------------------------------------------------------ identities (for the role switcher)
 
+def _plural(n: int, one: str, many: str = "") -> str:
+    return f"{n} {one if n == 1 else (many or one + 's')}"
+
+
+def demo_identities(db: Session) -> dict:
+    """
+    One ready-made identity per role, picked from the seeded data so that a single click lands on a
+    screen that already has something to look at. Every pick is a real record; `shows` counts what
+    that identity will actually see, so the sign-in screen never promises data that is not there.
+    The on-demand flagship project is skipped so the pick does not change when it is created.
+    """
+    pending = {cr.unit_id for cr in db.query(ChangeRequest).filter(ChangeRequest.status == "pending")}
+    disputed = {d.unit_id for d in db.query(Dispute).filter(Dispute.status != "resolved")}
+
+    # builder with the most units
+    rows = (db.query(Parcel.builder, Parcel.id, Unit.id)
+              .join(Building, Building.parcel_id == Parcel.id)
+              .join(Floor, Floor.building_id == Building.id)
+              .join(Unit, Unit.floor_id == Floor.id)
+              .filter(Parcel.builder != "", ~Parcel.builder.contains("(demo)")).all())
+    by_builder: dict[str, dict] = {}
+    for name, parcel_id, unit_id in rows:
+        b = by_builder.setdefault(name, {"projects": set(), "units": 0, "pending": 0})
+        b["projects"].add(parcel_id); b["units"] += 1
+        if unit_id in pending:
+            b["pending"] += 1
+    builder = None
+    if by_builder:
+        name, b = sorted(by_builder.items(), key=lambda kv: (-kv[1]["pending"], -kv[1]["units"], kv[0]))[0]
+        shows = f"{_plural(len(b['projects']), 'project')} · {_plural(b['units'], 'unit')}"
+        if b["pending"]:
+            shows += f" · {_plural(b['pending'], 'modification')} awaiting a decision"
+        builder = {"user": name, "name": name, "shows": shows}
+
+    # owner with something to act on, then with the most properties
+    owners: dict[str, dict] = {}
+    for u in db.query(Unit).options(selectinload(Unit.ownerships)):
+        for o in u.ownerships:
+            if not o.owner_email or "@" not in o.owner_email:
+                continue
+            e = owners.setdefault(o.owner_email, {"name": o.owner_name, "units": 0, "pending": 0, "disputes": 0})
+            e["units"] += 1
+            if u.id in pending:
+                e["pending"] += 1
+            if u.id in disputed:
+                e["disputes"] += 1
+    owner = None
+    if owners:
+        email, o = sorted(owners.items(), key=lambda kv: (-kv[1]["pending"], -kv[1]["disputes"], -kv[1]["units"], kv[0]))[0]
+        shows = _plural(o["units"], "registered property", "registered properties")
+        if o["pending"]:
+            shows += f" · {_plural(o['pending'], 'change')} to approve or dispute"
+        elif o["disputes"]:
+            shows += f" · {_plural(o['disputes'], 'open dispute')}"
+        owner = {"user": email, "name": o["name"], "shows": shows}
+
+    verified = db.query(func.count(Unit.id)).filter(Unit.verification_status == "verified").scalar() or 0
+    queue = db.query(func.count(Unit.id)).filter(Unit.verification_status == "pending").scalar() or 0
+    conflicts = db.query(func.count(Unit.id)).filter(Unit.verification_status == "conflict").scalar() or 0
+
+    return {
+        "public": {"user": "", "name": "Public visitor", "shows": f"{_plural(verified, 'verified property', 'verified properties')} to look up and check"},
+        "builder": builder,
+        "investor": {"user": "buyer@example.in", "name": "Demo Buyer", "shows": "search, verify and save any property"},
+        "owner": owner,
+        "admin": {"user": "admin", "name": "DoLR Land Records Officer",
+                  "shows": f"{_plural(queue, 'property', 'properties')} awaiting verification · {_plural(conflicts, 'conflict')}"},
+    }
+
+
 @router.get("/identities")
 def identities(db: Session = Depends(get_db)):
     builders = sorted({p.builder for p in db.query(Parcel).all() if p.builder})
@@ -63,6 +134,7 @@ def identities(db: Session = Depends(get_db)):
         "builders": builders,
         "investors": [{"email": e, "name": seen[e]} for e in demo + others],
         "admin": {"name": "DoLR Land Records Officer", "user": "admin"},
+        "demo": demo_identities(db),
     }
 
 
