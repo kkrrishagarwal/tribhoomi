@@ -88,7 +88,7 @@ export default function DemoStory({ core, full, more }: { core: Step[]; full: St
         <p className="mt-2 text-xs text-ink-dim">The same story in finer steps, for a longer walkthrough. Steps up to the review open the proposed copy of 3-C; the last steps open the approved copy.</p>
         <ol className="mt-3 space-y-3">{full.map(stepCard)}</ol>
       </details>
-      <p className="mt-6 text-xs text-ink-dim">Roles are simulated: switch from the sign-in page or the header. Steps that need a role say so.</p>
+      <p className="mt-6 text-xs text-ink-dim">Roles are simulated, but a sign-in holds: you stay as one identity until you sign out. Steps that need a different role say so and take you through sign-in and back.</p>
     </div>
   );
 }

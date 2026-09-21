@@ -26,7 +26,7 @@ export default function NavLinks() {
     ...(mine ? [{ href: mine.href, label: t("nav.investor"), on: under(mine.under) }] : []),
     ...(s.role === "admin" ? [{ href: "/authority", label: t("nav.adminShort"), on: under(["/authority"]) }] : []),
     { href: "/demo", label: t("nav.demo"), on: under(["/demo"]) },
-    ...(s.role === "public" ? [{ href: "/signin", label: t("nav.signin"), on: under(["/signin"]) }] : []),
+    ...(!s.signedIn ? [{ href: "/signin", label: t("nav.signin"), on: under(["/signin"]) }] : []),
   ];
   return (
     <nav aria-label="Main" className="flex flex-wrap items-center gap-0.5 text-sm">

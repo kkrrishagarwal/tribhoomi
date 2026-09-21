@@ -106,9 +106,12 @@ its method, and uses "potential conflict / unusual change / requires review" lan
 
 ## Roles
 
-There is no login. Sign-in pages (`/signin/<role>`) and the header dropdown switch identity, and every API call carries
-`X-Role` / `X-User` headers that the backend checks (`app/auth.py`). Swap that dependency for
-real JWT auth later without touching the endpoints.
+No passwords, but one committed session. `/signin` is the only way in: it stores a role +
+identity that holds until the person signs out from the header, and nothing else in the app
+changes identity. `/signin?role=<role>&next=<path>` preselects a role and returns to `next`
+afterwards, which is how role-gated pages and the guided demo send people through sign-in.
+Every API call carries `X-Role` / `X-User` headers that the backend checks (`app/auth.py`), so
+swapping that dependency for real auth later needs no endpoint changes.
 
 | Role | Page | Can |
 |---|---|---|
@@ -164,7 +167,7 @@ frontend/src/
   app/parcel/[id]/page.tsx ← Three.js unit viewer + ownership panel + validator + change warnings
   app/builder, app/investor, app/verify, app/admin   ← integrity module UIs
   app/ulpin, app/ai, app/dashboard, app/demo
-  components/ParcelMap.tsx (Leaflet + drawing), CesiumMap.tsx, Building3D.tsx, DiffMap.tsx, ParcelSidebar.tsx, ChangeRequestForm.tsx, RoleSwitcher.tsx
+  components/ParcelMap.tsx (Leaflet + drawing), CesiumMap.tsx, Building3D.tsx, DiffMap.tsx, ParcelSidebar.tsx, ChangeRequestForm.tsx, SessionBadge.tsx
   lib/useLayoutTools.ts    ← shared parcel/search/draw/upload state for both map pages
   lib/api.ts               ← typed API client
 docker-compose.yml         ← optional PostGIS

@@ -114,5 +114,6 @@ Backend alone: `docker build -t tribhoomi-api backend` (add `--build-arg AI=0` f
 - Home map loads parcels; `/globe` shows terrain (only with the Cesium token).
 - `/verify?ulpin=09-141-0018-00046-B01-F04-U03-A` shows **TAMPERED** — the seeded story.
 - Scan a QR from your phone: it must open the deployed `/verify` page, not localhost.
-- The role dropdown is a demo device: anyone can pick "Government". Say so if asked; real
-  auth is out of scope for the prototype.
+- Sign-in is a demo device: no password is checked and anyone may pick "Government authority".
+  Say so if asked; real auth is out of scope for the prototype. A session still holds until you
+  sign out, so nothing switches role mid-demo.

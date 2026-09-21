@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
 import NavLinks from "@/components/NavLinks";
-import RoleSwitcher from "@/components/RoleSwitcher";
+import SessionBadge from "@/components/SessionBadge";
 import LangToggle from "@/components/LangToggle";
 import T from "@/components/T";
 import ServerStatus from "@/components/ServerStatus";
@@ -30,7 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <div className="ml-auto flex flex-wrap items-center gap-4">
               <NavLinks />
               <LangToggle />
-              <RoleSwitcher />
+              <SessionBadge />
             </div>
           </div>
         </header>

@@ -3,12 +3,15 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import { setSession, type Role } from "@/lib/session";
+import { setSession, signOut, type Role } from "@/lib/session";
+import { useSession } from "@/lib/useSession";
 
 /**
- * The front door: choose a role, then an identity. There is no real authentication in the
- * prototype — this screen only sets the same session (role + user) the header dropdown sets.
- * It must render without the backend: the demo identities are an optional extra.
+ * The one way in. Choosing a role here starts a session that holds until the person signs out:
+ * nothing else in the app changes identity, so coming back here while signed in offers to
+ * continue or to sign out, never a silent switch.
+ * There is no real authentication in the prototype, and the page must render without the
+ * backend: the demo identities are an optional extra.
  */
 type RoleKey = "public" | "builder" | "investor" | "owner" | "authority";
 type Choice = { label: string; user: string; name: string };
@@ -50,8 +53,12 @@ function Skyline() {
   );
 }
 
+const titleOf = (role: Role) => ROLES.find((r) => r.role === role)?.title ?? role;
+const homeOf = (role: Role) => ROLES.find((r) => r.role === role)?.home ?? "/";
+
 export default function SignIn() {
   const router = useRouter();
+  const s = useSession();
   const [open, setOpen] = useState<RoleKey | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -77,6 +84,8 @@ export default function SignIn() {
     load();
     return () => { stop = true; clearTimeout(timer); };
   }, [ids]);
+
+  const wanted = ROLES.find((r) => r.key === open);   // role asked for by ?role=, e.g. a demo step that needs the authority
 
   const go = (r: (typeof ROLES)[number], user: string, display: string) => {
     if (going) return;
@@ -120,6 +129,35 @@ export default function SignIn() {
         </section>
 
         <section className="glass order-1 min-w-0 rounded-xl p-4 sm:p-6 lg:order-2" aria-labelledby="signin-title">
+          {s.signedIn ? (
+            <>
+              <div className="flex items-center justify-between gap-3">
+                <h2 id="signin-title" className="h2">You are signed in</h2>
+                <span className="demo-badge">Demo mode</span>
+              </div>
+              <div className="mt-4 rounded-lg border border-[var(--line-strong)] bg-[rgba(34,232,200,0.06)] p-4">
+                <div className="label">Signed in as</div>
+                <div className="mt-1 text-lg font-semibold">{s.name}</div>
+                <div className="text-sm text-ink-muted">{titleOf(s.role)}</div>
+              </div>
+              <div className="mt-4 flex flex-col gap-2">
+                {wanted && wanted.role !== s.role ? (
+                  <>
+                    <button type="button" onClick={signOut} className="btn-accent justify-center">Sign out and continue as {wanted.title.toLowerCase()}</button>
+                    <p className="text-xs text-ink-muted">This step needs the {wanted.title.toLowerCase()} role. You are signed in as {titleOf(s.role).toLowerCase()}.</p>
+                    <Link href={next ?? homeOf(s.role)} className="btn-ghost justify-center">Stay signed in as {titleOf(s.role).toLowerCase()}</Link>
+                  </>
+                ) : (
+                  <>
+                    <Link href={next ?? homeOf(s.role)} className="btn-accent justify-center">Continue as {titleOf(s.role).toLowerCase()}</Link>
+                    <button type="button" onClick={signOut} className="btn-ghost justify-center">Sign out to use a different role</button>
+                  </>
+                )}
+              </div>
+              <p className="mt-4 text-xs text-ink-dim">One identity at a time. A session holds until you sign out, so every action is recorded against the role you signed in with.</p>
+            </>
+          ) : (
+            <>
           <div className="flex items-center justify-between gap-3">
             <h2 id="signin-title" className="h2">Choose your role</h2>
             <span className="demo-badge">Demo mode</span>
@@ -171,8 +209,9 @@ export default function SignIn() {
               );
             })}
           </ul>
-
-          <p className="mt-4 text-xs text-ink-dim">Roles are simulated for the prototype: nothing you type leaves this browser, and the server still enforces what each role may do. <Link href="/" className="text-accent hover:underline">About Tribhoomi</Link></p>
+            </>
+          )}
+          <p className="mt-4 text-xs text-ink-dim">Roles are simulated for the prototype: no password is checked, nothing you type leaves this browser, and the server still enforces what each role may do. <Link href="/" className="text-accent hover:underline">About Tribhoomi</Link></p>
         </section>
       </div>
     </div>

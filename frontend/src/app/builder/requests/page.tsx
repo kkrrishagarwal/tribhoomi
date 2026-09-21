@@ -22,7 +22,7 @@ export default function BuilderPage() {
   const load = () => api.builderOverview().then((d) => { setData(d); setErr(null); }).catch((e) => setErr(e.message));
   useEffect(() => { if (s.role !== "public") load(); }, [s]);
 
-  if (s.role === "public") return <div className="mx-auto max-w-lg p-8 text-center text-sm text-slate-600">Switch to a <b>Builder</b> identity from the header dropdown to open the builder desk.</div>;
+  if (s.role === "public") return <div className="mx-auto max-w-lg p-8 text-center text-sm text-slate-600">Sign in as a <b>Builder</b> to open the builder desk. <Link href="/signin?role=builder&next=%2Fbuilder%2Frequests" className="btn-accent mt-3 justify-center">Sign in (demo mode)</Link></div>;
   if (err) return <LoadError message={err} onRetry={load} what="the modification requests" />;
   if (!data) return <ScanLoader text="Loading builder desk" className="p-16" />;
 

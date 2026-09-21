@@ -20,7 +20,7 @@ export default function AdminPage() {
   const load = () => api.adminOverview().then((x) => { setD(x); setErr(null); }).catch((e) => setErr(e.message));
   useEffect(() => { if (s.role === "admin") load(); }, [s]);
 
-  if (s.role !== "admin") return <div className="mx-auto max-w-lg p-8 text-center text-sm text-slate-600">Switch to the <b>Government</b> identity from the header dropdown to open the audit view.</div>;
+  if (s.role !== "admin") return <div className="mx-auto max-w-lg p-8 text-center text-sm text-slate-600">Sign in as the <b>Government authority</b> to open the audit view. <Link href="/signin?role=authority&next=%2Fauthority%2Fdisputes" className="btn-accent mt-3 justify-center">Sign in (demo mode)</Link></div>;
   if (err) return <LoadError message={err} onRetry={load} what="the disputes" />;
   if (!d) return <ScanLoader text="Loading audit queue" className="p-16" />;
 

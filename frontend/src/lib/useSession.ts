@@ -1,14 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
-import { getSession, type Session } from "./session";
+import { getSession, SIGNED_OUT, type Session } from "./session";
 
 export function useSession(): Session {
-  const [s, setS] = useState<Session>({ role: "public", user: "", name: "Public visitor" });
+  const [s, setS] = useState<Session>(SIGNED_OUT);
   useEffect(() => {
     const sync = () => setS(getSession());
     sync();
     window.addEventListener("tribhoomi-session", sync);
-    window.addEventListener("storage", sync);
+    window.addEventListener("storage", sync);   // sign out in one tab signs out the others
     return () => { window.removeEventListener("tribhoomi-session", sync); window.removeEventListener("storage", sync); };
   }, []);
   return s;
